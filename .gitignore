@@ -20,6 +20,7 @@ zip/
 *.pem
 *.crt
 *.key
+*.csr
 
 # SSL configuration files
 localhost.conf
