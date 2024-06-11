@@ -1,0 +1,25 @@
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+
+# Babel cache
+.babelrc
+
+# VSCode settings
+.vscode/
+
+# MacOS specific
+.DS_Store
+
+# Other
+zip/
+
+# HTTPS certificates and keys
+*.pem
+*.crt
+*.key
+
+# SSL configuration files
+localhost.conf

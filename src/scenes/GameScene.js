@@ -1,0 +1,588 @@
+// @ts-check
+
+import ManagerGame from "../game/ManagerGame.js";
+import DataDrag from "../game/DataDrag.js";
+import * as SettingDesk from "./tools/SetingDesk.js"
+import {COLOR} from "../core/tools/constants.js"
+
+/** @typedef {import("../game/CardGO.js").default} CardGO */
+/** @typedef {import("../game/SpotGO.js").default} SpotGO */
+
+export default class GameScene extends Phaser.Scene {
+    
+    //#playerData ;
+
+    cardGeometry;
+    dragDistanceThreshold;
+    percentageEntryThreshold;
+    minEntryThreshold;
+
+
+    /** @type {ManagerGame} */
+    managerGame;
+
+    positionsSpots;
+    dataSessionJSON;
+
+    constructor() {
+        super( { key: 'Game' } );
+        this.sdk = null;
+        this.userSettingsManager = null;
+    }
+
+    init(data) {
+
+        this.sdk = data.sdkProvider;
+        this.userSettingsManager = data.userSettingsManager;
+        this.cardGeometry = data.cardGeometry;
+        this.dataSessionJSON = data.dataSessionJSON;
+
+        this.dragDistanceThreshold = 17;
+        this.percentageEntryThreshold = 10;
+        this.minEntryThreshold = {
+            width: Math.round(this.cardGeometry.width * this.percentageEntryThreshold / 100),
+            height: Math.round(this.cardGeometry.height * this.percentageEntryThreshold / 100),
+        };
+
+        const settingsResize = this.recalculateScreen();
+
+        this.scene.launch('UIScene', {
+            sdkProvider: this.sdk,
+            userSettingsManager: this.userSettingsManager,
+            settingsResize: settingsResize
+        });
+
+        this.managerGame = new ManagerGame(this, false);
+        
+        this.managerGame.redrawUIGame(settingsResize);
+        
+    }
+
+    async create() {
+
+        //let color = this.registry.get('settings').background;
+        //0xA9D4C9
+        this.cameras.main.setBackgroundColor(COLOR.BACKGROUND);
+        //this.cameras.main.setBackgroundColor(0x30681f);
+
+        //this.textures.addCanvas('gradientBackground', createGradientTexture(this.scale.width, this.scale.height, '#30681f', '#377C49'));
+
+        //this.add.image(0, 0, 'gradientBackground').setOrigin(0);
+
+        //this.bg = this.add.image(0, 0, 'background');
+        this.resizeBackground();
+
+        this.managerGame.init(this.positionsSpots);
+        
+        //this.initClickedObject();
+
+        this.initDragAndClick();
+        this.linkToInterfaceScene();
+
+        await this.managerGame.gameNewOrReset();
+        this.showAd();
+        if (this.userSettingsManager.settings.isSaved && this.dataSessionJSON) {
+            this.managerGame.loadGameState(this.dataSessionJSON);
+        } else {
+            await this.managerGame.dealCards();
+        }
+        this.dataSessionJSON = undefined;
+        
+        const debounced = (func, ms) => {
+            let timeout;
+            return function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, arguments), ms);
+            }
+        }
+
+        const fResizeGame = debounced(() => {
+            const settingsResize = this.recalculateScreen();
+            this.managerGame.redrawUIGame(settingsResize);
+            this.managerGame.redrawDeskGame(this.positionsSpots);
+            this.resizeBackground();
+        }, 100);
+
+
+        window.addEventListener('resize', () => {
+            
+            fResizeGame();
+            
+        });
+
+        window.addEventListener('beforeunload', (e) => {
+
+            console.log('beforeunload');
+
+            // this.saveGameState();
+
+        });
+
+        window.addEventListener('unload', () => {
+            
+            console.log('unload');
+            
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                // Страница скрыта, можно сохранить состояние
+                console.log('visibilitychange - hidden');
+
+                this.stopHint();
+
+                this.managerGame.putOnPause();
+
+                this.saveGameState();
+
+            } else if (document.visibilityState === 'visible') {
+                // Страница снова видима, можно восстановить состояние
+                console.log('visibilitychange - visible');
+            }
+        });
+
+    }
+
+    saveGameState() {
+        this.managerGame.saveGameState();
+    }
+
+    linkToInterfaceScene() {
+
+        const ourUIScene = this.scene.get('UIScene');
+
+        ourUIScene.events.on('runCommandUndo', (data) => {
+            
+            this.resetIdleTimer();
+            this.managerGame.runCommandUndo(data);
+
+        }, this);
+
+        ourUIScene.events.on('restartGame', async (data) => {
+            
+            this.resetIdleTimer();
+            await this.managerGame.gameNewOrReset(data.isNewGame);
+            this.showAd();
+            await this.managerGame.dealCards();
+            
+            //this.managerGame.startGame();
+            
+ 
+         }, this);
+
+        ourUIScene.events.on('runCommandMagic', (data) => {
+            
+            this.resetIdleTimer();
+            this.managerGame.runCommandMagic(data);
+ 
+        }, this);
+
+        ourUIScene.events.on('runCommandHint', (data) => {
+            
+            this.resetIdleTimer();
+            this.managerGame.runCommandHint(data);
+ 
+        }, this);
+
+        ourUIScene.events.on('openModalUI', (data) => {
+        
+            this.resetIdleTimer();
+            this.managerGame.handleOpeningModalUI(data);
+
+        }, this);
+
+    }
+
+    initDragAndClick() {
+
+        const dataPointerdown = {
+            wasClicked: false,
+            wasDragged: false,
+            isHandler: false,
+            asyncOperationPromise: undefined,
+            currentlyOver: [],
+        };
+        this.isDragging = false;
+        this.startPoint = new Phaser.Math.Vector2();
+
+        const range = {
+            minX: 0,
+            maxX: 0,
+            minY: 0,
+            maxY: 0,
+        };
+
+        /** @type {DataDrag}  */
+        let dataDrag;
+
+        this.input.dragDistanceThreshold = this.dragDistanceThreshold;
+
+        this.input.on('dragstart',
+            /** 
+             * @param {Phaser.Input.Pointer} pointer
+             * @param {CardGO} gameObject
+            */
+            async (pointer, gameObject) => { 
+
+                this.resetIdleTimer();
+
+                if (!this.managerGame.isGameRuning()) return;
+
+                dataPointerdown.wasDragged = true;
+            
+            if (dataDrag?.isActive || dataDrag?.isEnd) {
+                return;
+            }
+
+            range.maxX = this.scale.width - this.cardGeometry.width;
+            range.maxY = this.scale.height - this.cardGeometry.height;
+
+            dataDrag = new DataDrag();
+
+            await this.managerGame.onDragStart(pointer, gameObject, dataDrag);
+
+        });
+
+        this.input.on('drag',
+            /** 
+             * @param {Phaser.Input.Pointer} pointer
+             * @param {CardGO} gameObject
+             * @param {number} dragX
+             * @param {number} dragY
+            */
+            async (pointer, gameObject, dragX, dragY) => {
+
+            this.resetIdleTimer();
+
+            if (!this.managerGame.isGameRuning()) return;
+                
+            // Предпологаемый центр карты с учетом границ экрана
+            const x = Math.round(Phaser.Math.Clamp(dragX, range.minX, range.maxX));
+            const y = Math.round(Phaser.Math.Clamp(dragY, range.minY, range.maxY));
+
+            await this.managerGame.onDrag(pointer, gameObject, dataDrag, {x, y});
+
+        });
+
+        this.input.on('dragend',
+            /** 
+             * @param {Phaser.Input.Pointer} pointer
+             * @param {CardGO} gameObject
+            */
+            async (pointer, gameObject) => { 
+
+            this.resetIdleTimer();
+
+            if (!this.managerGame.isGameRuning()) return;
+
+            await this.managerGame.onDragEnd(pointer, gameObject, dataDrag);
+
+        });
+
+        //-------------------------
+
+        const dataClicked = {
+            gameObject: undefined
+        };
+
+        let isThrottled = false;
+
+        this.input.on("gameobjectdown",
+            /** 
+             * @param {Phaser.Input.Pointer} pointer
+             * @param {CardGO|SpotGO} gameObject
+             * @param {Phaser.Types.Input.EventData} event
+            */
+            async (pointer, gameObject, event) => {
+
+            this.unlockSound();
+            this.resetIdleTimer();
+
+            if (!this.managerGame.isGameRuning()) return;
+
+            dataPointerdown.wasDragged = false;
+
+            await this.managerGame.gameobjectdown(pointer, gameObject, dataClicked);
+
+        }, this);
+
+        const handleMove = (pointer) => {
+
+            if (this.startPoint.distance(new Phaser.Math.Vector2(pointer.x, pointer.y)) > this.dragDistanceThreshold) {
+                this.isDragging = true;
+            }
+
+        };
+
+        this.input.on('pointerdown', (pointer, currentlyOver) => {
+            
+            this.unlockSound();
+            this.resetIdleTimer();
+
+            if (!this.managerGame.isGameRuning()) return;
+
+            dataPointerdown.wasClicked = false;
+            dataPointerdown.isHandler = false;
+            dataPointerdown.wasDragged = false;
+            dataPointerdown.asyncOperationPromise = undefined;
+            dataPointerdown.currentlyOver = [...currentlyOver];
+
+            //this.managerGame.pointerdown();
+
+            this.isDragging = false;
+            this.startPoint.set(pointer.x, pointer.y);
+
+            this.input.on('pointermove', handleMove, this);
+
+        });
+
+        // this.input.on('pointermove', (pointer) => {
+        //     if (this.startPoint.distance(new Phaser.Math.Vector2(pointer.x, pointer.y)) > this.dragDistanceThreshold) {
+        //         this.isDragging = true;
+        //     }
+        // });
+
+        this.input.on("gameobjectup", 
+            /** 
+             * @param {Phaser.Input.Pointer} pointer
+             * @param {CardGO|SpotGO} gameObject
+             * @param {Phaser.Types.Input.EventData} event
+            */
+            async (pointer, gameObject, event) => {
+
+            this.resetIdleTimer();
+
+            if (!this.managerGame.isGameRuning()) return;
+
+            dataPointerdown.wasClicked = false;
+            if (gameObject == dataClicked.gameObject) {
+                
+                if (dataPointerdown.wasDragged) {
+
+                    if (pointer.getDistance() > this.dragDistanceThreshold) {
+                        if (dataPointerdown.wasDragged && pointer.getDistance() < this.dragDistanceThreshold + 10) {
+                            dataPointerdown.wasClicked =  "isOpen" in gameObject ? !gameObject.isOpen : false;
+                        }
+                    }
+
+                } else {
+                    dataPointerdown.wasClicked = true;
+                }
+
+            }
+            
+            if (dataPointerdown.wasClicked) {
+
+                if (isThrottled) {
+
+                    return;
+                }
+
+                isThrottled = true;
+
+                dataPointerdown.asyncOperationPromise = new Promise(async (resolve) => {
+                    dataPointerdown.isHandler = await this.managerGame.gameobjectup(pointer, gameObject, dataClicked);
+                    resolve(dataPointerdown.isHandler);
+                });
+                
+
+                setTimeout(function() {
+                    isThrottled = false;
+                    }, 110);
+            }
+            
+            dataClicked.gameObject = undefined;
+
+        }, this);
+
+        this.input.on('pointerup', async (pointer, currentlyOver) => {
+
+            this.resetIdleTimer();
+
+            // Deactivate move listener when the pointer is released
+            this.input.off('pointermove', handleMove, this);
+            
+            if (!this.managerGame.isGameRuning()) return;
+
+            if (dataPointerdown.asyncOperationPromise) {
+                await dataPointerdown.asyncOperationPromise;
+                dataPointerdown.asyncOperationPromise = undefined;
+            }
+            
+            if (dataPointerdown.isHandler) {
+                return;
+            } if (dataPointerdown.wasDragged && !dataPointerdown.wasClicked) {
+                return;
+            }
+            this.managerGame.onEmptyClicked(pointer, dataPointerdown.currentlyOver, currentlyOver, dataPointerdown.wasClicked && !dataPointerdown.wasDragged);
+            
+        });
+        
+    }
+
+    unlockSound() {
+        if (this.sound.locked) {
+            console.log(this.sound.unlock(), this.sound.locked);
+        }
+    }
+
+    recalculateScreen() {
+
+        const parentSize = {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            aspectRatio: window.innerHeight / window.innerWidth,
+        };
+
+        let settingDesk;
+        if (this.game.device.os.desktop) {
+            settingDesk = SettingDesk.myScaleApp_DESKTOP(this.cardGeometry, parentSize);
+        } else if (parentSize.width > parentSize.height) {
+            settingDesk = SettingDesk.myScaleApp_LANDSCAPE(this.cardGeometry, parentSize);
+        } else {
+            settingDesk = SettingDesk.myScaleApp_PORTRAIT(this.cardGeometry, parentSize);
+        }
+
+        this.positionsSpots = settingDesk.positionSpot;
+
+        this.scale.resize(settingDesk.width, settingDesk.height);
+        this.cameras.resize(settingDesk.width, settingDesk.height);
+        this.scale.setGameSize(settingDesk.width, settingDesk.height);
+
+        return {
+            parentSize: parentSize,
+            settingDesk: settingDesk,
+            isDesktop: this.game.device.os.desktop,
+            cardGeometry: this.cardGeometry,
+        };
+    }
+
+    getScaleGame() {
+        return this.scale.width > this.scale.height ? window.innerWidth / this.scale.width : window.innerHeight / this.scale.height;
+    }
+
+    stopHint() {
+        this.managerGame.stopHint();
+    }
+
+    getBestResult() {
+        return this.managerGame.getBestResult();
+    }
+
+    resetIdleTimer() {
+        this.managerGame.resetIdleTimer();
+    }
+
+    async showAd() {
+        try {
+            await this.sdk.showInterstitialAd();
+        } catch (error) {
+            console.error('Error when displaying ads:', error.message);
+            // Дополнительные действия по обработке ошибки
+        }
+    }
+
+    resizeBackground() {
+
+        // if (!this.bg) return;
+
+        // // const scale = Math.max(window.innerWidth / this.bg.width, window.innerHeight / this.bg.height) //* window.devicePixelRatio;
+
+        // // // Масштабируем изображение так, чтобы оно покрывало экран, не искажая пропорции
+        // // this.bg.setScale(scale).setScrollFactor(0);
+
+        // // // Центрируем изображение
+        // // this.bg.setPosition(this.cameras.main.width / 2, this.cameras.main.height / 2);
+        
+        // // // Обрезаем изображение по размерам экрана
+        // // this.bg.setCrop(0, 0, this.cameras.main.width, this.cameras.main.height);
+
+        // //this.bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+
+
+        // const scaleX = this.scale.width / this.bg.width;
+        // const scaleY = this.scale.height / this.bg.height;
+        // const scale = Math.max(scaleX, scaleY) * window.devicePixelRatio;
+
+        // this.bg.setScale(scale).setScrollFactor(0);
+
+        // this.bg.setPosition(this.cameras.main.width / 2, this.cameras.main.height / 2);
+        // this.bg.setCrop(0, 0, this.cameras.main.width, this.cameras.main.height);
+
+    }
+
+    jjjj() {
+
+
+        // рисование на канвасе
+
+
+        //////////////////////////////////////
+
+        const posX = this.scale.gameSize.width / 2 - (140 + 5) * 7 / 2;
+        const posY = this.scale.gameSize.height - 190;
+
+        /////////////////////////////////////
+
+
+        function roundedRectPath(x,y,w,h,r){
+            if(!Array.isArray(r)){
+                r = (Math.min(w,h)/2 > r)? r : Math.min(w,h)/2;
+                r = [r,r,r,r];
+            } else {
+                if(r.length == 1){
+                    r = (Math.min(w,h)/2 > r[0])? r[0] : Math.min(w,h)/2;
+                    r = [r,r,r,r];
+                } else if(r.length == 2){
+                    r = [r[0], r[0], r[1], r[1]];
+                }
+            }
+            
+            return `M ${x + r[3]} ${y} l ${w-r[3]-r[0]} 0 q ${r[0]} 0 ${r[0]} ${r[0]}
+                l 0 ${h-r[0]-r[1]} q 0 ${r[1]} ${-r[1]} ${r[1]}
+                l ${-w+r[1]+r[2]} 0 q ${-r[2]} 0 ${-r[2]} ${-r[2]}
+                l 0 ${-h+r[2]+r[3]} q 0 ${-r[3]} ${r[3]} ${-r[3]}`;
+        }
+
+        const texture = this.textures.createCanvas('aatest', (140 + 5) * 7,190 * 0.7);
+
+        const ctx = texture.context;
+
+        ctx.fillStyle = '0xff0000';
+        // ctx.fillRect(0, 0, 256, 256);
+
+       // ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 12;
+        
+        // ctx.beginPath();
+        // ctx.moveTo(20, 20);
+        // ctx.bezierCurveTo(20, 100, 200, 100, 200, 20);
+        // ctx.stroke();
+
+        ctx.fill(new Path2D(roundedRectPath(0,0,(140 + 5) * 7,190 * 0.7,25)));
+
+
+        texture.refresh();
+
+
+        const image = this.add.image(posX, posY, 'aatest');
+        image.setOrigin(0);
+        image.alpha = 0.2;
+
+        /////////////////////////////////////
+
+
+        
+
+        // const graphics = this.add.graphics();
+        // //graphics.lineStyle(14, 0x00ff00, 1);
+        // graphics.fillStyle(0xff0000, 0.2);
+        // graphics.fillRoundedRect(posX+ 5, posY, (140 + 5) * 7 - 10, 190 * 0.7, 25);
+
+    }
+
+    
+
+    
+
+}
