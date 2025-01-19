@@ -48,7 +48,7 @@ export default class Button {
         this.label = this.scene.add.text(pos2.x, pos2.y, text)
             //.setFontStyle('bold')
             .setColor('#ffffff')
-            .setFontSize(this.scene.textFontSize / this.scene.scaleGame)
+            .setFontSize(this.scene.textFontSize *  window.devicePixelRatio)
             .setFontFamily('Arial')
             .setScale(1 / window.devicePixelRatio)
             .setOrigin(0.5, 0.3);
@@ -100,19 +100,19 @@ export default class Button {
                 this.isHandlerRunning = false;
             }
 
-        });
+        }, this);
 
         this.sprite.on('pointerup', () => {
             this.normalDisplay();
-        });
+        }, this);
 
         this.sprite.on('pointerover', () => {
             this.activeDisplay();
-        });
+        }, this);
 
         this.sprite.on('pointerout', () => {
             this.normalDisplay();
-        });
+        }, this);
     }
 
     getPosition() {
@@ -131,9 +131,9 @@ export default class Button {
     }
 
     getSystemScale() {
-        let  scale =  1 * this.owner.scale / (window.devicePixelRatio * this.owner.scene.scaleGame);
+        let  scale =  1;
         if (this.owner.scene.settingsResize.settingDesk.type !== 'DESKTOP') {
-            scale *= (30 / 18);
+            scale = (30 / 18);
         }
         return scale;
     }
@@ -149,7 +149,8 @@ export default class Button {
 
         const pos2 = this.getLabelPosition();
         this.label.setPosition(pos2.x, pos2.y)
-            .setFontSize(this.owner.scene.textFontSize / this.owner.scene.scaleGame);
+            //.setFontSize(this.owner.scene.textFontSize / this.owner.scene.scaleGame);
+            .setFontSize(this.scene.textFontSize *  window.devicePixelRatio);
 
     }
 
@@ -285,19 +286,19 @@ export default class Button {
 
     normalDisplay() {
         this.sprite.setAlpha(0.1).setScale(this.getSystemScale());
-        this.label.setFontSize(this.scene.textFontSize / this.scene.scaleGame);
+        this.label.setFontSize(this.scene.textFontSize * window.devicePixelRatio);
         this.sprite2.setAlpha(1).setScale(this.getSystemScale() * 0.8);
     }
 
     normalDisableDisplay() {
         this.sprite.setAlpha(0.1).setScale(this.getSystemScale());
-        this.label.setAlpha(0.4).setFontSize(this.scene.textFontSize / this.scene.scaleGame);
+        this.label.setAlpha(0.4).setFontSize(this.scene.textFontSize * window.devicePixelRatio);
         this.sprite2.setAlpha(0.2).setScale(this.getSystemScale() * 0.8);
     }
 
     activeDisplay() {
         this.sprite.setAlpha(0.4).setScale(this.getSystemScale() + 0.1);
-        this.label.setFontSize(this.scene.textFontSize / this.scene.scaleGame * 1.15);
+        this.label.setFontSize(this.scene.textFontSize * window.devicePixelRatio * 1.15);
         this.sprite2.setAlpha(1).setScale(this.getSystemScale() * 0.85);
     }
 }

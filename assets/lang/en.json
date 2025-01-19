@@ -3,6 +3,7 @@
     "label_moves": "Moves",
     "label_time": "Time",
     "label_won": "You Won!",
+    "label_magic": "Magic",
     "label_settings": "Settings",
     "label_sound": "Sound",
     "label_hints": "Auto Hints",
@@ -16,9 +17,13 @@
     "btn_new_game": "New Game",
     "btn_replay": "Replay",
     "btn_close": "Close",
+    "btn_show_ad": "Viewing ads",
     "best_title": "Best",
     "hint_move": "Move {current} of {total}",
     "hint_recycle_cards": "Recycle Cards",
     "hint_draw": "Draw",
-    "hint_none": "No card can be moved"
+    "hint_none": "No card can be moved",
+    "magic_updated": "Magic replenished",
+    "magic_no_updated": "Replenishment declined",
+    "label_magic_update": "Magic requires\n\nrestoration"
 }

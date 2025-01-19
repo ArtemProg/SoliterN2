@@ -3,6 +3,7 @@
     "label_moves": "Ходы",
     "label_time": "Время",
     "label_won": "Вы выиграли!",
+    "label_magic": "Магия",
     "label_settings": "Настройки",
     "label_sound": "Звук",
     "btn_settings": "Настройки",
@@ -16,9 +17,13 @@
     "btn_new_game": "Новая игра",
     "btn_replay": "Переиграть",
     "btn_close": "Закрыть",
+    "btn_show_ad": "Просмотр рекламы",
     "best_title": "Лучший",
     "hint_move": "Перемещение {current} из {total}",
     "hint_recycle_cards": "Переложить карты",
     "hint_draw": "Взять карту",
-    "hint_none": "Ходов не найдено"
+    "hint_none": "Ходов не найдено",
+    "magic_updated": "Магия восполнена",
+    "magic_no_updated": "Восстановление отклонено",
+    "label_magic_update": "Магия требует\nвосстановления"
 }

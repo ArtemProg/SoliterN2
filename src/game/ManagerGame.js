@@ -110,6 +110,9 @@ export default class ManagerGame {
     /** @type {number} */
     #numberOfTime = 0;
 
+    /** @type {number} */
+    #numberOfMagic = 0;
+
     idleTime;
 
     localization;
@@ -141,6 +144,15 @@ export default class ManagerGame {
         this.#notifyUI = true;
     }
 
+    get numberOfMagic() {
+        return this.#numberOfMagic;
+    }
+
+    set numberOfMagic(value) {
+        this.#numberOfMagic = value;
+        this.#notifyUI = true;
+    }
+    
     get statusGame() {
         return this.#statusGame;
     }
@@ -181,6 +193,8 @@ export default class ManagerGame {
         this.#croupier = new Croupier();
         this.#sound = new SoundGame(this.#scene, this);
         this.#commandHistory = new CommandHistory();
+
+        this.userSettingsManager.addObserver(this);
 
         this.createSpots(positions);
         this.createCards();
@@ -352,6 +366,7 @@ export default class ManagerGame {
 
         this.numberOfMoves = 0;
         this.numberOfScore = 0;
+        this.numberOfMagic = 2;
         
         this.#croupier.mixAndTransferToSpotStok(isNewGame);
 
@@ -608,6 +623,8 @@ export default class ManagerGame {
 
     initIdleTime() {
 
+        const isAutoHints = () => this.#scene.userSettingsManager.settings.autoHints;
+
         const idleTime = {
             time: 0,
             schedule: [
@@ -617,7 +634,7 @@ export default class ManagerGame {
                     loop: true,
                     delay: 15000,
                     callback: (item) => {
-                        if (this.statusGame !== STATUS_GAME.RUNNING) return;
+                        if (this.statusGame !== STATUS_GAME.RUNNING || !isAutoHints()) return;
                         console.info("Показать подсказку");
                         const data = {
                             displayText: false,
@@ -629,7 +646,7 @@ export default class ManagerGame {
                 },
                 {
                     name: 'pause',
-                    time: 90000,
+                    time: 120000,
                     loop: false,
                     callback: (item) => {
                         console.info("Пауза игры");
@@ -640,7 +657,6 @@ export default class ManagerGame {
                             this.sdk.showInterstitialAd();
                         } catch (error) {
                             console.error('Error when displaying ads:', error.message);
-                            // Дополнительные действия по обработке ошибки
                         }
                     },
                     isCompleted: false,
@@ -1469,12 +1485,17 @@ export default class ManagerGame {
     async checkPropertyGame() {
 
         if (this.statusGame === STATUS_GAME.RUNNING && (this.#croupier.checkFoundationsSpot() || this.#croupier.checkPileSpot())) {
-           
-            this.statusGame = STATUS_GAME.GAME_OVER;
-
-            this.#scene.time.delayedCall(100, this.displayCompletionAndVictory, [], this);
+            
+            if (this.isAutoComplite() || this.#croupier.checkFoundationsSpot()) {
+                this.statusGame = STATUS_GAME.GAME_OVER;
+                this.#scene.time.delayedCall(100, this.displayCompletionAndVictory, [], this);
+            }
 
         }
+    }
+
+    isAutoComplite() {
+        return this.#scene.userSettingsManager.settings.autoComplite;
     }
     
     async displayCompletionAndVictory() {
@@ -2259,6 +2280,10 @@ export default class ManagerGame {
         }
     }
 
+    addMagic(num) {
+        this.numberOfMagic = this.numberOfMagic + num;
+    }
+
     addMoves() {
         this.numberOfMoves = this.numberOfMoves + 1;
     }
@@ -2274,6 +2299,7 @@ export default class ManagerGame {
             score: this.#numberOfScore,
             time: this.reusableTimerEvent.getTime(),
             moves: this.#numberOfMoves,
+            magic: this.#numberOfMagic,
             history: this.#commandHistory.toJSON(),
         };
     }
@@ -2323,6 +2349,7 @@ export default class ManagerGame {
 
         this.numberOfScore = mementoState.score;
         this.numberOfMoves = mementoState.moves;
+        this.#numberOfMagic = mementoState.magic || 2;
         
         // таймер
         const currentTime = this.#scene.time.now;
@@ -2502,6 +2529,32 @@ export default class ManagerGame {
         }
         
     }
+
+
+    async showRewardedVideo(data) {
+
+        this.stopHint();
+
+        this.putOnPause();
+
+        
+
+        let result = false;
+        try {
+            result = await this.sdk.showRewardedAd();
+            this.addMagic(2);
+        } catch (error) {
+            console.error('Error when displaying ads:', error.message);
+        }
+        
+        let text = result ? this.localization.magic_updated : this.localization.magic_no_updated;
+        this.#scene.events.emit('hintShowText', {text: text});
+
+        this.#scene.time.delayedCall(2000, () => {
+            this.#scene.events.emit('hintHideText', {});
+        }, [], this);
+    }
+
 
     putOnPause() {
         if (this.statusGame === STATUS_GAME.RUNNING) {
@@ -2835,6 +2888,13 @@ export default class ManagerGame {
             return fResult(true);
         }
 
+        if (this.numberOfMagic <= 0) {
+            
+            this.#scene.events.emit('showAdPanel');
+
+            return fResult(true);
+        }
+
         let nameCommand;
         if (dataMagicMove.type === 'FirstCard') {
             nameCommand = 'magicMoveCardFirstCard';
@@ -2855,6 +2915,8 @@ export default class ManagerGame {
             dataMagicMove.spotTo);
 
         await this.executeCommands([commad]);
+
+        this.addMagic(-1);
 
         this.addMoves();
         this.updateValueUI();
@@ -3182,5 +3244,11 @@ export default class ManagerGame {
             template = template.replace(`{${param}}`, params[param]);
         }
         return template;
+    }
+
+    onEvent(event, data) {
+        if (event === 'saveSettings') {
+            this.#sound.updateVolume();
+        }
     }
 }

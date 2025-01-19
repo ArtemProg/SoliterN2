@@ -130,7 +130,8 @@ export default class UIScene extends Phaser.Scene
             
            // const textFontSize = Math.round(this.textFontSize / this.scaleGame);
 
-            labelCount.setFontSize(textFontSize / this.scaleGame);
+            //labelCount.setFontSize(textFontSize / this.scaleGame);
+            labelCount.setFontSize(textFontSize * window.devicePixelRatio);
 
             const posX = posXY.x + 5 / this.scaleGame;
             const posY = posXY.y + this.settingsResize.cardGeometry.height - 5 / this.scaleGame;;
@@ -179,7 +180,8 @@ export default class UIScene extends Phaser.Scene
                 panel.width = this.settingsResize.settingDesk.activeDesk.end - this.settingsResize.settingDesk.activeDesk.start;
                 panel.height = this.settingsResize.settingDesk.dashboardHeight;
                 
-                const textFontSize = Math.round(this.textFontSize / this.scaleGame);
+                //const textFontSize = Math.round(this.textFontSize / this.scaleGame);
+                const textFontSize = Math.round(this.textFontSize * window.devicePixelRatio);
                 text1.setFontSize(textFontSize);
                 
                 let posY = Math.max(fPosY(), text1.height / 2.9);
@@ -249,17 +251,21 @@ export default class UIScene extends Phaser.Scene
 
         ourGame.events.on('dragStart', () => {
             this.uiFacade.turnOffInteractiveButtonPanel();
-        });
+        }, this);
         ourGame.events.on('dragEnd', () => {
             this.uiFacade.turnOnInteractiveButtonPanel();
-        });
+        }, this);
 
         ourGame.events.on('hintShowText', (data) => {
             this.hintPanel.showHint(data);
-        });
+        }, this);
         ourGame.events.on('hintHideText', (data) => {
             this.hintPanel.hideHint(data);
-        });
+        }, this);
+
+        ourGame.events.on('showAdPanel', (data) => {
+            this.uiFacade.openAdPanel();
+        }, this);
 
     }
 
@@ -286,6 +292,12 @@ export default class UIScene extends Phaser.Scene
         this.time.delayedCall(200, () => {
             this.events.emit('restartGame', {isNewGame: false});
             this.uiFacade.restartGame();
+        });
+    }
+
+    onClickShowRewardedAd() {
+        this.time.delayedCall(100, () => {
+            this.events.emit('showRewardedVideo', {});
         });
     }
 

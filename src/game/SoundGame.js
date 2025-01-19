@@ -16,6 +16,7 @@ export default class SoundGame {
 
     #guitarStrings;
     #indexGuitarStrings;
+    #volume;
 
     /** @param {Phaser.Scene} scene */
     constructor(scene, manager) {
@@ -24,6 +25,14 @@ export default class SoundGame {
         this.#manager = manager;
 
         this.#isLoaded = false;
+
+        this.#volume = {
+            slide: [0, 0.3, 0.1],
+            undo: [0, 0.3, 0.1],
+            shake: [0, 0.3, 0.1],
+            deal : [0, 0.3, 0.1],
+            guitarStrings : [0, 0.3, 0.1],
+        };
 
         this.loadAssets();
     }
@@ -91,6 +100,25 @@ export default class SoundGame {
         this.#guitarStrings[this.#indexGuitarStrings].play();
     }
 
+    updateVolume() {
+
+        if (!this.#isLoaded) return;
+        
+        const sound = this.#manager.userSettingsManager.settings.sound;
+        
+        for (const music of this.#slide) {
+            music.setVolume(this.#volume.slide[sound]);
+        }
+
+        this.#undo.setVolume(this.#volume.undo[sound]);
+        this.#shake.setVolume(this.#volume.shake[sound]);
+        this.#deal.setVolume(this.#volume.deal[sound]);
+        
+        for (const music of this.#guitarStrings) {
+            music.setVolume(this.#volume.guitarStrings[sound]);
+        }
+    }
+
     loadAssets() {
 
         const scene = this.#scene;
@@ -137,5 +165,8 @@ export default class SoundGame {
         }
 
         this.#isLoaded = true;
+        
+        this.updateVolume();
+        
     }
 }

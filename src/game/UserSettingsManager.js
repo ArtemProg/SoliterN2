@@ -2,6 +2,8 @@
 
 export default class UserSettingsManager {
 
+    #observers;
+
     constructor(sdkProvider) {
         this.sdkProvider = sdkProvider;
         this.settings = {
@@ -16,6 +18,8 @@ export default class UserSettingsManager {
         };
         this.pendingChanges = {};
         this.language = 'en';
+
+        this.#observers = [];
     }
 
     loadSettings() {
@@ -38,6 +42,8 @@ export default class UserSettingsManager {
     saveSettings() {
         Object.assign(this.settings, this.pendingChanges);
         this.pendingChanges = {};
+
+        this.notify('saveSettings', this);
 
         return this.sdkProvider.setPlayerStats(this.settings)
             .then(() => {
@@ -112,5 +118,19 @@ export default class UserSettingsManager {
 
     getGameSession() {
         return this.sdkProvider.getGameSession();
+    }
+
+    addObserver(observer) {
+        const isExist = this.#observers.includes(observer);
+        if (isExist) {
+            return;
+        }
+        this.#observers.push(observer);
+    }
+
+    notify(event, data) {
+        for (const observer of this.#observers) {
+            observer.onEvent(event, data);
+        }
     }
 }

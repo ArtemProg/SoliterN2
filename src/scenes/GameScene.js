@@ -60,21 +60,9 @@ export default class GameScene extends Phaser.Scene {
 
     async create() {
 
-        //let color = this.registry.get('settings').background;
-        //0xA9D4C9
         this.cameras.main.setBackgroundColor(COLOR.BACKGROUND);
-        //this.cameras.main.setBackgroundColor(0x30681f);
-
-        //this.textures.addCanvas('gradientBackground', createGradientTexture(this.scale.width, this.scale.height, '#30681f', '#377C49'));
-
-        //this.add.image(0, 0, 'gradientBackground').setOrigin(0);
-
-        //this.bg = this.add.image(0, 0, 'background');
-        this.resizeBackground();
 
         this.managerGame.init(this.positionsSpots);
-        
-        //this.initClickedObject();
 
         this.initDragAndClick();
         this.linkToInterfaceScene();
@@ -100,7 +88,6 @@ export default class GameScene extends Phaser.Scene {
             const settingsResize = this.recalculateScreen();
             this.managerGame.redrawUIGame(settingsResize);
             this.managerGame.redrawDeskGame(this.positionsSpots);
-            this.resizeBackground();
         }, 100);
 
 
@@ -162,7 +149,7 @@ export default class GameScene extends Phaser.Scene {
             
             this.resetIdleTimer();
             await this.managerGame.gameNewOrReset(data.isNewGame);
-            this.showAd();
+            await this.showAd();
             await this.managerGame.dealCards();
             
             //this.managerGame.startGame();
@@ -188,6 +175,13 @@ export default class GameScene extends Phaser.Scene {
         
             this.resetIdleTimer();
             this.managerGame.handleOpeningModalUI(data);
+
+        }, this);
+
+        ourUIScene.events.on('showRewardedVideo', (data) => {
+        
+            this.resetIdleTimer();
+            this.managerGame.showRewardedVideo(data);
 
         }, this);
 
@@ -481,108 +475,5 @@ export default class GameScene extends Phaser.Scene {
             // Дополнительные действия по обработке ошибки
         }
     }
-
-    resizeBackground() {
-
-        // if (!this.bg) return;
-
-        // // const scale = Math.max(window.innerWidth / this.bg.width, window.innerHeight / this.bg.height) //* window.devicePixelRatio;
-
-        // // // Масштабируем изображение так, чтобы оно покрывало экран, не искажая пропорции
-        // // this.bg.setScale(scale).setScrollFactor(0);
-
-        // // // Центрируем изображение
-        // // this.bg.setPosition(this.cameras.main.width / 2, this.cameras.main.height / 2);
-        
-        // // // Обрезаем изображение по размерам экрана
-        // // this.bg.setCrop(0, 0, this.cameras.main.width, this.cameras.main.height);
-
-        // //this.bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-
-
-        // const scaleX = this.scale.width / this.bg.width;
-        // const scaleY = this.scale.height / this.bg.height;
-        // const scale = Math.max(scaleX, scaleY) * window.devicePixelRatio;
-
-        // this.bg.setScale(scale).setScrollFactor(0);
-
-        // this.bg.setPosition(this.cameras.main.width / 2, this.cameras.main.height / 2);
-        // this.bg.setCrop(0, 0, this.cameras.main.width, this.cameras.main.height);
-
-    }
-
-    jjjj() {
-
-
-        // рисование на канвасе
-
-
-        //////////////////////////////////////
-
-        const posX = this.scale.gameSize.width / 2 - (140 + 5) * 7 / 2;
-        const posY = this.scale.gameSize.height - 190;
-
-        /////////////////////////////////////
-
-
-        function roundedRectPath(x,y,w,h,r){
-            if(!Array.isArray(r)){
-                r = (Math.min(w,h)/2 > r)? r : Math.min(w,h)/2;
-                r = [r,r,r,r];
-            } else {
-                if(r.length == 1){
-                    r = (Math.min(w,h)/2 > r[0])? r[0] : Math.min(w,h)/2;
-                    r = [r,r,r,r];
-                } else if(r.length == 2){
-                    r = [r[0], r[0], r[1], r[1]];
-                }
-            }
-            
-            return `M ${x + r[3]} ${y} l ${w-r[3]-r[0]} 0 q ${r[0]} 0 ${r[0]} ${r[0]}
-                l 0 ${h-r[0]-r[1]} q 0 ${r[1]} ${-r[1]} ${r[1]}
-                l ${-w+r[1]+r[2]} 0 q ${-r[2]} 0 ${-r[2]} ${-r[2]}
-                l 0 ${-h+r[2]+r[3]} q 0 ${-r[3]} ${r[3]} ${-r[3]}`;
-        }
-
-        const texture = this.textures.createCanvas('aatest', (140 + 5) * 7,190 * 0.7);
-
-        const ctx = texture.context;
-
-        ctx.fillStyle = '0xff0000';
-        // ctx.fillRect(0, 0, 256, 256);
-
-       // ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 12;
-        
-        // ctx.beginPath();
-        // ctx.moveTo(20, 20);
-        // ctx.bezierCurveTo(20, 100, 200, 100, 200, 20);
-        // ctx.stroke();
-
-        ctx.fill(new Path2D(roundedRectPath(0,0,(140 + 5) * 7,190 * 0.7,25)));
-
-
-        texture.refresh();
-
-
-        const image = this.add.image(posX, posY, 'aatest');
-        image.setOrigin(0);
-        image.alpha = 0.2;
-
-        /////////////////////////////////////
-
-
-        
-
-        // const graphics = this.add.graphics();
-        // //graphics.lineStyle(14, 0x00ff00, 1);
-        // graphics.fillStyle(0xff0000, 0.2);
-        // graphics.fillRoundedRect(posX+ 5, posY, (140 + 5) * 7 - 10, 190 * 0.7, 25);
-
-    }
-
-    
-
-    
 
 }

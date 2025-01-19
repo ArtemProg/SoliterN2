@@ -41,7 +41,10 @@ export default class Form extends SubjectMixin(Observer) {
     update() {
         this.container.setPosition(this.x, this.y);
         this.zone.setPosition(this.x, this.y);
-        this.drawBackground(this.x, this.y, this.width, this.height, 25 * window.devicePixelRatio * this.scene.scaleGame);
+
+        let radius = Math.min(25 * window.devicePixelRatio * this.scene.scaleGame, this.height * 30 / 100);
+
+        this.drawBackground(this.x, this.y, this.width, this.height, radius);
         this.isOpen && this.canBeInteractive ? this.setInteractive() : this.disableInteractive();
     }
 

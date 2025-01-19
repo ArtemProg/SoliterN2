@@ -51,6 +51,11 @@ export default class ButtonPanel extends Form {
 
         this.activeBtn = undefined;
 
+        if (btn.awaitCompletion) {
+            this.isCooldown = true;
+            this.activeBtn = btn;
+        }
+
         const dataEvent = {name: 'buttonPanel'};
         if (btn.name === 'Settings' && event === 'onClick') {
             this.notify('onClickSettings', dataEvent);
@@ -66,10 +71,7 @@ export default class ButtonPanel extends Form {
             return false;
         }
 
-        if (btn.awaitCompletion) {
-            this.isCooldown = true;
-            this.activeBtn = btn;
-        } else {
+        if (!btn.awaitCompletion) {
             this.startCooldown(btn.delay);
         }
         
@@ -102,20 +104,21 @@ export default class ButtonPanel extends Form {
             {name: 'Undo', text: `${localization.btn_undo}`, timeOut: 200, awaitCompletion: true},
         ];
 
-        let itemSize = baseItemSize / window.devicePixelRatio / scene.scaleGame;
+        //let itemSize = baseItemSize / window.devicePixelRatio / scene.scaleGame;
+        let itemSize = baseItemSize;
 
+        let scale = 1;
         if (scene.settingsResize.settingDesk.type !== 'DESKTOP') {
-            itemSize = itemSize * 30 / 18;
+            scale = 30 / 18;
+            itemSize = itemSize * scale;
         }
 
         let cellSize = itemSize * 1.2;
         
         let width = cellSize * btns.length;
 
-        let scale = 1;
         if (width > scene.scale.width) {
             const _width = scene.scale.width * 0.98;
-            scale = _width / width;
             width = _width;
             cellSize = width / btns.length;
         }
@@ -128,6 +131,7 @@ export default class ButtonPanel extends Form {
             cellSize: cellSize,
             width: width,
             height: height,
+            scale: scale,
             extendShape: width < scene.scale.width,
         };
 

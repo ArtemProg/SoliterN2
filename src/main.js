@@ -18,9 +18,9 @@ import LocalStorageSDK from "./gameProvider/LocalStorageSDK";
 window.addEventListener('load', () => {
     
     function chooseSDKProvider() {
-        
+        return new LocalStorageSDK();
         if (process.env.NODE_ENV === 'production') {
-            return new YandexSDK();
+          return new YandexSDK();
         } else {
             return new LocalStorageSDK();
         }

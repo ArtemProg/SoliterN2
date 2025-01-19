@@ -96,9 +96,12 @@ export default class YandexSDK extends GameSDK {
                         onOpen: () => console.log('Rewarded video ad opened'),
                         onRewarded: () => {
                             console.log('User rewarded');
-                            resolve();
+                            resolve(true);
                         },
-                        onClose: () => console.log('Rewarded video ad closed'),
+                        onClose: () => {
+                            console.log('Rewarded video ad closed');
+                            resolve(false);
+                        },
                         onError: err => {
                             console.error('Error showing rewarded video ad:', err);
                             reject(err);
@@ -121,7 +124,7 @@ export default class YandexSDK extends GameSDK {
                 if (this.sdk) {
                     this.sdk.adv.showFullscreenAdv({
                         callbacks: {
-                            onOpen: () => console.log('Interstitial ad opened'),
+                            //onOpen: () => console.log('Interstitial ad opened'),
                             onClose: () => {
                                 console.log('Interstitial ad closed');
                                 resolve();

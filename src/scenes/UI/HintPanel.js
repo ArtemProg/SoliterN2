@@ -7,35 +7,54 @@ export default class HintPanel extends SubjectMixin(Observer) {
         
         super();
 
-        const props = HintPanel.getBaseSettings(scene);
-
         this.scene = scene;
-        this.width = props.width;
-        this.height = props.height;
+
+        const isDesktop = scene.settingsResize.settingDesk.type === 'DESKTOP';
+
+        this.label = this.scene.add.text(0, 0, 'HINT')
+            .setColor('#ffffff')
+            .setText('123456789012345678901234')
+            .setFontSize((isDesktop ? 30 : 40) * window.devicePixelRatio)
+            .setFontFamily('Arial')
+            .setOrigin(0.5, 0.5)
+            .setScale(1 / window.devicePixelRatio);
+
+        this.width = this.label.width / window.devicePixelRatio;
+        this.height = this.label.height * 3 / window.devicePixelRatio;
         this.isOpen = isOpen;
 
         this.scale = 1;
         
         this.container = scene.add.container();
         this.container.setSize(this.width, this.height);
-        this.container.setPosition(props.x, props.y)
+
+        this.updatePosition();
        
         this.shape = this.scene.add.sprite(0, 0, this.getNameTexture())
             .setAlpha(0.7)
             .setOrigin(0.5, 0.5);
 
-        this.label = this.scene.add.text(0, 0, 'HINT')
-            .setColor('#ffffff')
-            .setFontSize(props.fontSize)
-            .setFontFamily('Arial')
-            .setOrigin(0.5, 0.5);
-        
         this.container.add(this.shape);
         this.container.add(this.label);
         scene.add.existing(this.container);
 
         this.setVisible(this.isOpen);
         
+    }
+
+    updatePosition() {
+        let separatorY = 0
+        {
+            let itemSize = 70;
+            let scale = 1;
+            if (this.scene.settingsResize.settingDesk.type !== 'DESKTOP') {
+                scale = 30 / 18;
+                itemSize = itemSize * scale;
+            }
+            let cellSize = itemSize * 1.2;
+            separatorY += cellSize;
+        }
+        this.container.setPosition(this.scene.scale.width / 2, this.scene.scale.height - this.height - separatorY);
     }
 
     getNameTexture() {
@@ -80,13 +99,27 @@ export default class HintPanel extends SubjectMixin(Observer) {
         const _scaleGame = window.devicePixelRatio * scene.scaleGame;
         const scaleGame = _scaleGame * (isDesktop ? 30/18 : 1);
 
+        let separatorY = 0
+        {
+            let itemSize = 70;
+            let scale = 1;
+            if (scene.settingsResize.settingDesk.type !== 'DESKTOP') {
+                scale = 30 / 18;
+                itemSize = itemSize * scale;
+            }
+            let cellSize = itemSize * 1.2;
+            separatorY += cellSize;
+        }
+
+        const height = 120 / scaleGame;
+
         const posX = scene.scale.width / 2;
-        const posY = scene.scale.height - 240 / scaleGame;
+        const posY = scene.scale.height - height - separatorY;
 
         return {
             width: 500 / scaleGame,
-            height: 120 / scaleGame,
-            fontSize: 40 / scaleGame,
+            height: height,
+            fontSize: (isDesktop ? 30 : 40) *  window.devicePixelRatio,
             x: posX,
             y: posY,
         }
@@ -94,17 +127,17 @@ export default class HintPanel extends SubjectMixin(Observer) {
 
     resize() {
         
-        const props = HintPanel.getBaseSettings(this.scene);
+        //const props = HintPanel.getBaseSettings(this.scene);
 
-        this.container.setPosition(props.x, props.y);
+        this.updatePosition();
 
-        this.container.setSize(this.width, this.height);
+        //this.container.setSize(this.width, this.height);
 
-        this.shape.setTexture(this.getNameTexture())
-            .setAlpha(0.7)
-            .setOrigin(0.5, 0.5);
+        // this.shape.setTexture(this.getNameTexture())
+        //     .setAlpha(0.7)
+        //     .setOrigin(0.5, 0.5);
 
-        this.label.setFontSize(props.fontSize);
+        //this.label.setFontSize(props.fontSize);
     }
 
     onEvent(event, data) {

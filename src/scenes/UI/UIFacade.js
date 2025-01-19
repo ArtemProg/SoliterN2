@@ -5,6 +5,7 @@ import ButtonPanel from './ButtonPanel.js';
 import BackgroundPanel from './BackgroundPanel.js';
 import PlayPanel from './PlayPanel.js';
 import SettingsPanel from './SettingsPanel.js';
+import AdPanel from './AdPanel.js';
 import WonPanel from './WonPanel.js';
 import {STATUS_GAME, COLOR} from "../../core/tools/constants.js"
 
@@ -44,6 +45,10 @@ export default class UIFacade extends SubjectMixin(Observer) {
         this.wonPanel.addObserver(this);
         this.addObserver(this.wonPanel);
 
+        this.isAdPanelOpen = false;
+        this.adPanel = new AdPanel(scene, this.isAdPanelOpen);
+        this.adPanel.addObserver(this);
+        this.addObserver(this.adPanel);
     }
 
     startCooldown() {
@@ -64,6 +69,8 @@ export default class UIFacade extends SubjectMixin(Observer) {
                     this.toggleSettingsPanel();
                 } else if (this.isPlayPanelOpen) {
                     this.togglePlayPanel();
+                } else if (this.isAdPanelOpen) {
+                    this.toggleAdPanel();
                 }
             }
             
@@ -100,6 +107,12 @@ export default class UIFacade extends SubjectMixin(Observer) {
             } else if (event === 'onClickNewGame') {
                 this.toggleWonPanel();
                 this.scene.onClickNewGame();
+            }
+        } else if (data.name === 'adPanel') {
+
+            if (event === 'onClickShowRewardedAd') {
+                this.toggleAdPanel();
+                this.scene.onClickShowRewardedAd();
             }
         }
     }
@@ -210,6 +223,7 @@ export default class UIFacade extends SubjectMixin(Observer) {
     }
 
     togglePlayPanel() {
+
         if (this.isAnimating || this.isCooldown) return;
 
         if (this.isPlayPanelOpen) {
@@ -317,6 +331,56 @@ export default class UIFacade extends SubjectMixin(Observer) {
             this.closeWonPanel();
         } else {
             this.openWonPanel();
+        }
+    }
+
+    openAdPanel() {
+
+        if (this.isAnimating || this.isCooldown) return;
+
+        this.isAnimating = true;
+        
+        const hideButtonPanel = this.buttonPanel.close();
+        const showBackgroundPanel = this.backgroundPanel.open();
+        const showAdPanel = this.adPanel.open();
+        
+        Promise.all([hideButtonPanel, showBackgroundPanel, showAdPanel]).then(() => {
+            this.isButtonPanelOpen = false;
+            this.isBackgroundPanelOpen = true;
+            this.isAdPanelOpen = true;
+            this.isAnimating = false;
+            this.onOpenModalUI(this.wonPanel, this.isWonPanelOpen);
+            this.startCooldown();
+        });
+    }
+
+    closeAdPanel() {
+
+        if (this.isAnimating || this.isCooldown) return;
+
+        this.isAnimating = true;
+
+        const hideBackgroundPanel = this.backgroundPanel.close();
+        const showAdPanel = this.adPanel.close();
+        const showButtonPanel = this.buttonPanel.open();
+
+        Promise.all([hideBackgroundPanel, showAdPanel, showButtonPanel]).then(() => {
+            this.isBackgroundPanelOpen = false;
+            this.isAdPanelOpen = false;
+            this.isButtonPanelOpen = true;
+            this.isAnimating = false;
+            this.onOpenModalUI(this.wonPanel, this.isWonPanelOpen);
+            this.startCooldown();
+        });
+    }
+
+    toggleAdPanel() {
+        if (this.isAnimating || this.isCooldown) return;
+
+        if (this.isAdPanelOpen) {
+            this.closeAdPanel();
+        } else {
+            this.openAdPanel();
         }
     }
 

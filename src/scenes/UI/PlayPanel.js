@@ -113,13 +113,19 @@ export default class PlayPanel extends Form {
             {name: 'Close', text: 'Close', timeOut: 1500},
         ];
 
-        
         const isLandscape = scene.settingsResize.settingDesk.type === 'LANDSCAPE';
+        const isPortrait = scene.settingsResize.settingDesk.type === 'PORTRAIT';
         const isDesktop = scene.settingsResize.settingDesk.type === 'DESKTOP';
         
-        const scaleGame = window.devicePixelRatio * scene.scaleGame * (isDesktop ? 2 : 1);
+        let scaleGame = window.devicePixelRatio * scene.scaleGame * (isDesktop ? 2 : 1);
 
         let width = 600 / scaleGame;
+
+        if (width >= scene.scale.width * (isPortrait ? 0.8 : 0.5)) {
+            width = scene.scale.width * (isPortrait ? 0.8 : 0.5);
+            scaleGame = 600 / width;
+        }
+
         let height = isLandscape ? scene.scale.height : 190 * 4 / scaleGame;
 
         const btn_width = 500 / scaleGame;

@@ -158,7 +158,7 @@ export default class WonPanel extends Form {
                 labelValue.setFontSize(fontSize);
             },
             setScaleImage(scale) {
-                image.setScale(scale * 0.5);
+                image.setScale(scale);
             },
             setPositionX: (posX) => {
                 labelTitle.setPosition(posX, this.posY(1));
@@ -261,13 +261,19 @@ export default class WonPanel extends Form {
         const isDesktop = scene.settingsResize.settingDesk.type === 'DESKTOP';
         
         const _scaleGame = window.devicePixelRatio * scene.scaleGame;
-        const scaleGame = _scaleGame * (isDesktop ? 30/18 : 1);
+        const scaleGame = _scaleGame * (isDesktop ? 30/18 : (window.devicePixelRatio > 2.5 ? 0.7 : 1));
 
-        let width = 600 / scaleGame;
-        let height = 670 / scaleGame;
+
+        const scaleGame2 = isDesktop ? 1.5 : 0.8;//window.devicePixelRatio * scene.scaleGame * (isDesktop ? 2 : 1);
+
+        // let width = 600 / scaleGame;
+        // let height = isLandscape ? scene.scale.height : 190 * 4 / scaleGame;
+
+        let width = 600 / scaleGame2;
+        let height = 670 / scaleGame2;
 
         const btn_width = width / 2 * 0.8;
-        const btn_height = 100 / scaleGame;
+        const btn_height = 100 / scaleGame2;
 
         const separator = (width - btn_width * 2) / 3;
 
@@ -288,24 +294,24 @@ export default class WonPanel extends Form {
                 posX1: btn_posX1,
                 posX2: btn_posX2,
                 posY: btn_posY,
-                fontSize: 40 / scaleGame,
+                fontSize: 40 / scaleGame2,
             },
             cell: {
                 cellSize: cellSize,
                 posX1: cell_posX1,
                 posX2: cell_posX2,
                 posX3: cell_posX3,
-                fontSize: 40 / scaleGame,
-                scaleImage: _scaleGame * (isDesktop ? 0.9 : 1),
+                fontSize: 40 / scaleGame2,
+                scaleImage: 0.5,//_scaleGame * (isDesktop ? 0.9 : 1),
             },
             title: {
                 posX: width / 2,
-                posY: 60 / scaleGame,
-                fontSize: 60 / scaleGame,
+                posY: 60 / scaleGame2,
+                fontSize: 60 / scaleGame2,
             },
             width: width,
             height: height,
-            scaleGame: scaleGame,
+            scaleGame: scaleGame2,
         };
 
     }

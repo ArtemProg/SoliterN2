@@ -141,7 +141,7 @@ export default class SettingsPanel extends Form {
         const isLandscape = scene.settingsResize.settingDesk.type === 'LANDSCAPE';
         const isDesktop = scene.settingsResize.settingDesk.type === 'DESKTOP';
         
-        const scaleGame = window.devicePixelRatio * scene.scaleGame * (isDesktop ? 2 : 1);
+        const scaleGame = isDesktop ? 1.5 : 0.8;//window.devicePixelRatio * scene.scaleGame * (isDesktop ? 2 : 1);
 
         let width = 600 / scaleGame;
         let height = isLandscape ? scene.scale.height : 190 * 4 / scaleGame;
@@ -161,7 +161,7 @@ export default class SettingsPanel extends Form {
                 posY2: 350 / scaleGame,
                 posY3: 450 / scaleGame,
                 fontSize: 50 / scaleGame,
-                scale: isDesktop ? 1.5 : 2
+                scale: 2 / scaleGame
             },
             width: width,
             height: height,
