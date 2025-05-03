@@ -1,5 +1,6 @@
 declare namespace YaGames {
     interface AdvCallbacks {
+        onOpen: () => void;
         onClose: (wasShown: boolean) => void;
         onError: (error: Error) => void;
     }

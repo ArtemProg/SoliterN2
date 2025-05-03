@@ -1,5 +1,6 @@
 const textures = new Map();
 let dynamicTextureGradient;
+let dynamicTextureCanvas;
 
 export function generateTexture(scene, width, height, radius, color) {
 
@@ -54,6 +55,46 @@ export function createGradientTexture(width, height, colorTop, colorBottom) {
     }
 
     return dynamicTextureGradient;
+}
+
+export function createRadialGradientCircleTexture(scene, diameter, colorCenter, colorEdge) {
+    const nameTexture = `dynamicRadialCircle_${diameter}_${colorCenter}_${colorEdge}`;
+
+    if (!dynamicTextureCanvas) {
+        dynamicTextureCanvas = document.createElement('canvas');
+    }
+
+    if (!textures.has(nameTexture)) {
+        dynamicTextureCanvas.width = diameter;
+        dynamicTextureCanvas.height = diameter;
+
+        let context = dynamicTextureCanvas.getContext('2d');
+        const cx = diameter / 2;
+        const cy = diameter / 2;
+        const radius = diameter / 2;
+
+        // Очищаем канву
+        context.clearRect(0, 0, diameter, diameter);
+
+        // Создаём радиальный градиент
+        let gradient = context.createRadialGradient(cx, cy, 0, cx, cy, radius);
+        gradient.addColorStop(0, colorCenter);
+        gradient.addColorStop(1, colorEdge);
+
+        // Создаем круг
+        context.fillStyle = gradient;
+        context.beginPath();
+        context.arc(cx, cy, radius, 0, Math.PI * 2);
+        context.closePath();
+        context.fill();
+
+        // Сохраняем в Phaser как текстуру
+        scene.textures.addCanvas(nameTexture, dynamicTextureCanvas);
+
+        textures.set(nameTexture, true);
+    }
+
+    return nameTexture;
 }
 
 function drawBackground(graphics, x, y, width, height, radius = 20) {

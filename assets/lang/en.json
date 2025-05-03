@@ -25,5 +25,6 @@
     "hint_none": "No card can be moved",
     "magic_updated": "Magic replenished",
     "magic_no_updated": "Replenishment declined",
-    "label_magic_update": "Magic requires\n\nrestoration"
+    "label_magic_update": "Magic requires\n\nrestoration",
+    "label_language": "Language: {lang}"
 }

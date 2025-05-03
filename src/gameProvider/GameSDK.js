@@ -6,6 +6,10 @@ export default class GameSDK {
     throw new Error('Method init() must be implemented.');
   }
 
+  gameIsLoaded() {
+    throw new Error('Method gameIsLoaded() must be implemented.');
+  }
+
   showRewardedAd() {
     throw new Error('Method showRewardedAd() must be implemented.');
   }

@@ -2,7 +2,7 @@
 
 /** @typedef {import("../UIScene.js").default} UIScene */
 
-export default class Button {
+export default class SimpleButton {
 
     owner;
     /** @type {UIScene} */
@@ -16,46 +16,25 @@ export default class Button {
     awaitCompletion;
 
     sprite;
-    label;
 
-    constructor(owner, name, text, delay, img, index, callback, awaitCompletion) {
+    constructor(owner, name, delay, pos, nameImage, callback, awaitCompletion) {
 
         this.owner = owner;
         this.scene = owner.scene;
         this.name = name;
-        this.text = text;
         this.delay = delay;
-        this.index = index;
+        
         this.isCooldown = false;
         this.canBeInteractive = true;
         this.awaitCompletion = awaitCompletion;
 
-        const pos1 = this.getPosition();
-        const pos2 = this.getLabelPosition();
-
-        this.sprite = this.scene.add.sprite(pos1.x, pos1.y, img.texture, img.frame)
+        this.sprite = this.scene.add.image(pos.x, pos.y, nameImage)
             .setOrigin(0.5, 0.5)
-            .setAlpha(0.1)
-            .setScale(this.getSystemScale())
+            .setAlpha(1)
+            .setScale(this.getSystemScale() * 0.8)
             .setInteractive();
 
-        //this.sprite2 = this.scene.add.image(pos1.x, pos1.y, name.toLowerCase())
-        this.sprite2 = this.scene.add.sprite(pos1.x, pos1.y, 'icons', name.toLowerCase())
-            .setOrigin(0.5, 0.5)
-            //.setAlpha(0.85)
-            .setScale(this.getSystemScale() * 0.8);
-        
-        this.label = this.scene.add.text(pos2.x, pos2.y, text)
-            //.setFontStyle('bold')
-            .setColor('#ffffff')
-            .setFontSize(this.scene.textFontSize *  window.devicePixelRatio)
-            .setFontFamily('Arial')
-            .setScale(1 / window.devicePixelRatio)
-            .setOrigin(0.5, 0.3);
-
         owner.add(this.sprite);
-        owner.add(this.sprite2);
-        owner.add(this.label);
 
 
         this.sprite.on('pointerdown', () => {
@@ -116,18 +95,7 @@ export default class Button {
     }
 
     getPosition() {
-        return {
-            x: this.owner.cellSize * this.index + this.owner.cellSize / 2,
-            y: this.owner.cellSize / 2
-        };
-    }
-
-    getLabelPosition() {
-        const pos = this.getPosition();
-        return {
-            x: pos.x,
-            y: pos.y + this.owner.height / 2 * 0.6
-        }
+        return this.owner.getItemPosition(this);
     }
 
     getSystemScale() {
@@ -138,24 +106,9 @@ export default class Button {
         return scale;
     }
 
-    setText(text) {
-        this.label.setText(text);
-    }
-
-    resize() {
-        
-        const pos1 = this.getPosition();
-        this.sprite.setPosition(pos1.x, pos1.y)
-            .setScale(this.getSystemScale());
-
-        this.sprite2.setPosition(pos1.x, pos1.y)
+    resize(pos) {
+        this.sprite.setPosition(pos.x, pos.y)
             .setScale(this.getSystemScale() * 0.8);
-
-        const pos2 = this.getLabelPosition();
-        this.label.setPosition(pos2.x, pos2.y)
-            //.setFontSize(this.owner.scene.textFontSize / this.owner.scene.scaleGame);
-            .setFontSize(this.scene.textFontSize *  window.devicePixelRatio);
-
     }
 
     startCooldown() {
@@ -187,7 +140,7 @@ export default class Button {
 
             if (this.owner.canBeInteractive) {
 
-                let promise1 = new Promise((resolve, reject) => {
+                let promise = new Promise((resolve, reject) => {
                     this.scene.tweens.add({
                         targets: this.sprite,
                         scale: this.getSystemScale() + 0.05,
@@ -201,55 +154,22 @@ export default class Button {
                         }
                     });
                 });
-                let promise2 = new Promise((resolve, reject) => {
-                    this.scene.tweens.add({
-                        targets: this.label,
-                        alpha: 1,
-                        ease: 'Linear',
-                        duration: 400,
-                        onComplete: () => {
-                            resolve();
-                        }
-                    });
-                });
-                let promise3 = new Promise((resolve, reject) => {
-                    this.scene.tweens.add({
-                        targets: this.sprite2,
-                        alpha: 0.7,
-                        ease: 'Linear',
-                        duration: 400,
-                        onComplete: () => {
-                            resolve();
-                        }
-                    });
-                });
-                // Promise.all([promise1, promise2, promise3]).then(() => {
-                //     if (this.owner.canBeInteractive) {
-                //         this.setInteractive();
-                //         this.normalDisplay();
-                //     } else {
-                //         this.disableInteractive();
-                //         this.normalDisableDisplay();
-                //     }
-                //     this.isCooldown = false;
-                // });
-
-                Promise.race([promise1, promise2, promise3]).then(() => {
+            
+                promise.then(() => {
                     if (this.owner.canBeInteractive) {
                         this.sprite.setInteractive();
                     }
+
                     if (callback) callback();
                     this.isCooldown = false;
-                }).then(() => {
-                    Promise.all([promise1, promise2, promise3]).then(() => {
-                        if (this.owner.canBeInteractive) {
-                            this.setInteractive();
-                            this.normalDisplay();
-                        } else {
-                            this.disableInteractive();
-                            this.normalDisableDisplay();
-                        }
-                    });
+
+                    if (this.owner.canBeInteractive) {
+                        this.setInteractive();
+                        this.normalDisplay();
+                    } else {
+                        this.disableInteractive();
+                        this.normalDisableDisplay();
+                    }
                 });
 
             } else {
@@ -267,15 +187,13 @@ export default class Button {
     setInteractive() {
         if (this.canBeInteractive) {
             this.sprite.setInteractive();
-            this.label.setAlpha(1);
-            this.sprite2.setAlpha(1);
+            this.sprite.setAlpha(1);
         }
     }
 
     disableInteractive() {
         this.sprite.disableInteractive();
-        this.label.setAlpha(0.4);
-        this.sprite2.setAlpha(0.2);
+        this.sprite.setAlpha(0.2);
     }
 
     setCanBeInteractive(value) {
@@ -289,20 +207,14 @@ export default class Button {
     }
 
     normalDisplay() {
-        this.sprite.setAlpha(0.1).setScale(this.getSystemScale());
-        this.label.setFontSize(this.scene.textFontSize * window.devicePixelRatio);
-        this.sprite2.setAlpha(1).setScale(this.getSystemScale() * 0.8);
+        this.sprite.setAlpha(1).setScale(this.getSystemScale() * 0.8);
     }
 
     normalDisableDisplay() {
-        this.sprite.setAlpha(0.1).setScale(this.getSystemScale());
-        this.label.setAlpha(0.4).setFontSize(this.scene.textFontSize * window.devicePixelRatio);
-        this.sprite2.setAlpha(0.2).setScale(this.getSystemScale() * 0.8);
+        this.sprite.setAlpha(0.2).setScale(this.getSystemScale() * 0.8);
     }
 
     activeDisplay() {
-        this.sprite.setAlpha(0.4).setScale(this.getSystemScale() + 0.1);
-        this.label.setFontSize(this.scene.textFontSize * window.devicePixelRatio * 1.15);
-        this.sprite2.setAlpha(1).setScale(this.getSystemScale() * 0.85);
+        this.sprite.setAlpha(1).setScale(this.getSystemScale() * 0.85);
     }
 }

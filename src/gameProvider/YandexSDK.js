@@ -16,8 +16,8 @@ export default class YandexSDK extends GameSDK {
             getPlayerData: { count: 0, limit: 100, interval: 300000, timer: null, lastRequestTime: 0 },
             setPlayerData: { count: 0, limit: 100, interval: 300000, timer: null, lastRequestTime: 0 },
 
-            showRewardedAd: { count: 0, limit: 5, interval: 60000, timer: null, lastRequestTime: 0 },
-            showInterstitialAd: { count: 0, limit: 1, interval: 61000, timer: null, lastRequestTime: 0 },
+            showRewardedAd: { count: 0, limit: 10, interval: 60000, timer: null, lastRequestTime: 0 },
+            showInterstitialAd: { count: 0, limit: 1, interval: 1 * 60000, timer: null, lastRequestTime: 0 },
         };
         this.loadRequestCounters();
     }
@@ -34,11 +34,21 @@ export default class YandexSDK extends GameSDK {
     }
 
     loadSDK() {
+    
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = 'https://yandex.ru/games/sdk/v2';
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error('Failed to load Yandex SDK script'));
+            script.src = "/sdk.js";
+            script.async = true;
+            
+            script.onload = () => {
+                resolve(YandexSDK || true); // Возвращаем SDK или флаг успеха
+            };
+            
+            script.onerror = () => {
+                document.head.removeChild(script); // Чистим DOM в случае ошибки
+                reject(new Error('Failed to load Yandex SDK script'));
+            };
+            
             document.head.appendChild(script);
         });
     }
@@ -54,6 +64,10 @@ export default class YandexSDK extends GameSDK {
                     reject(error);
                 });
         });
+    }
+
+    gameIsLoaded() {
+        if (this.sdk) this.sdk.features.LoadingAPI?.ready();
     }
 
     _throttleRequest(type, requestFunc) {
@@ -118,13 +132,16 @@ export default class YandexSDK extends GameSDK {
     });
   }
 
-    showInterstitialAd() {
+    showInterstitialAd(onOpenFunc) {
         return this._throttleRequest('showInterstitialAd', () => {
             return new Promise((resolve, reject) => {
                 if (this.sdk) {
                     this.sdk.adv.showFullscreenAdv({
                         callbacks: {
-                            //onOpen: () => console.log('Interstitial ad opened'),
+                            onOpen: () => {
+                                console.log('Interstitial ad opened');
+                                if (onOpenFunc) onOpenFunc();
+                            },
                             onClose: () => {
                                 console.log('Interstitial ad closed');
                                 resolve();

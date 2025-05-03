@@ -1,7 +1,5 @@
 // @ts-check
 
-// import {COLOR} from "../core/tools/constants.js"
-
 import UserSettingsManager from "../game/UserSettingsManager.js";
 
 export default class BootScene extends Phaser.Scene {

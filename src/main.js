@@ -12,7 +12,6 @@ import YandexSDK from "./gameProvider/YandexSDK.js";
 import MockSDK from "./gameProvider/MockSDK.js";
 import LocalStorageSDK from "./gameProvider/LocalStorageSDK";
 
-//import {atlasJSON} from "./core/tools/atlas.js";
 
 
 window.addEventListener('load', () => {

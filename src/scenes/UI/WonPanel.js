@@ -7,8 +7,6 @@ export default class WonPanel extends Form {
     btns = [];
 
     constructor(scene, isOpen) {
-        
-        const localization = scene.cache.json.get('localization');
 
         const props = WonPanel.getBaseSettings(scene);
 
@@ -17,7 +15,7 @@ export default class WonPanel extends Form {
         this.scaleGame = props.scaleGame;
 
         const dataTitle = props.title;
-        this.title = this.scene.add.text(dataTitle.posX, dataTitle.posY, `${localization.label_won}`)
+        this.title = this.scene.add.text(dataTitle.posX, dataTitle.posY, `label_won`)
             .setColor('#ffffff')
             .setFontSize(dataTitle.fontSize)
             .setFontFamily('Arial')
@@ -25,13 +23,13 @@ export default class WonPanel extends Form {
         this.add(this.title);
 
         const dataCell = props.cell;
-        this.score = this.createCell(dataCell.posX1, `${localization.label_score}`, '0', dataCell.fontSize);
-        this.time = this.createCell(dataCell.posX2, `${localization.label_time}`, '00:00', dataCell.fontSize);
-        this.moves = this.createCell(dataCell.posX3, `${localization.label_moves}`, '0', dataCell.fontSize);
+        this.score = this.createCell(dataCell.posX1, `label_score`, '0', dataCell.fontSize);
+        this.time = this.createCell(dataCell.posX2, `label_time`, '00:00', dataCell.fontSize);
+        this.moves = this.createCell(dataCell.posX3, `label_moves`, '0', dataCell.fontSize);
 
         const color = 0xffffff;
 
-        this.bestTitle = this.scene.add.text(this.width / 2, this.posY(4), `----- ( ${localization.best_title} )-----`)
+        this.bestTitle = this.scene.add.text(this.width / 2, this.posY(4), `best_title`)
             .setColor('#ffffff')
             .setFontSize(dataCell.fontSize * 0.8)
             .setFontStyle('bold')
@@ -79,7 +77,7 @@ export default class WonPanel extends Form {
             props.btn.height,
             color,
             this,
-            {name: 'Menu', text: `${localization.btn_menu}`, fontSize: props.btn.fontSize},
+            {name: 'Menu', text: `btn_menu`, fontSize: props.btn.fontSize},
             this.onButtondown
         );
 
@@ -90,9 +88,11 @@ export default class WonPanel extends Form {
             props.btn.height,
             color,
             this,
-            {name: 'NewGame', text: `${localization.btn_new_game}`, fontSize: props.btn.fontSize},
+            {name: 'NewGame', text: `btn_new_game`, fontSize: props.btn.fontSize},
             this.onButtondown
         );
+
+        this.updateLocalization();
         
     }
 
@@ -164,6 +164,9 @@ export default class WonPanel extends Form {
                 labelTitle.setPosition(posX, this.posY(1));
                 image.setPosition(posX, this.posY(2));
                 labelValue.setPosition(posX, this.posY(3));
+            },
+            setText: (text) => {
+                labelTitle.setText(text);
             },
         };
     }
@@ -358,5 +361,16 @@ export default class WonPanel extends Form {
         this.btns[0].setFontSize(props.btn.fontSize);
         this.btns[1].setFontSize(props.btn.fontSize);
         
+    }
+
+    updateLocalization() {
+        const localization = this.scene.getLocalization();
+
+        this.title.setText(localization.label_won);
+        this.score.setText(localization.label_score);
+        this.time.setText(localization.label_time);
+        this.moves.setText(localization.label_moves);
+
+        this.bestTitle.setText(`----- ( ${localization.best_title} )-----`);
     }
 }

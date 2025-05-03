@@ -3,7 +3,7 @@
 /** @typedef {import("../scenes/GameScene.js").default} GameScene */
 /** @typedef {import("../core/Spot.js").default} Spot */
 
-import {COLOR} from "../core/tools/constants.js";
+import * as constants from "../core/tools/constants.js";
 
 export default class SpotGO extends Phaser.GameObjects.Container {
 
@@ -88,7 +88,7 @@ export default class SpotGO extends Phaser.GameObjects.Container {
 
     cardover() {
         if (this.image) {
-            this.image.setTint(COLOR.YELLOW);
+            this.image.setTint(constants.COLOR.YELLOW);
         }
     }
 
@@ -129,7 +129,7 @@ export default class SpotGO extends Phaser.GameObjects.Container {
 
     flashingShape(callback) {
 
-        let color = COLOR.BRIGHT_YELLOW;//0xFFFFFF;
+        let color = constants.COLOR.BRIGHT_YELLOW;//0xFFFFFF;
 
         this.shape.scale = 1;
         this.shape.visible = true;

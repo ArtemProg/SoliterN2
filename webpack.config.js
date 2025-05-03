@@ -13,12 +13,15 @@ module.exports = (env, argv) => {
   return {
     entry: './src/main.js',
     output: {
-      filename: 'bundle.[contenthash].js',
+      // filename: 'bundle.[contenthash].js',
+      filename: 'bundle.js',
       path: path.resolve(__dirname, 'dist'),
       clean: true,
     },
-    mode: isProduction ? 'production' : 'development',
-    devtool: isProduction ? 'source-map' : 'inline-source-map', // Включение source maps
+    // mode: isProduction ? 'production' : 'development',
+    mode: 'development',
+    // devtool: isProduction ? 'source-map' : 'inline-source-map', // Включение source maps
+    devtool: false,
     resolve: {
       alias: {
         'phaser': path.resolve(__dirname, 'node_modules/phaser/dist/phaser.min.js')
@@ -26,13 +29,13 @@ module.exports = (env, argv) => {
     },
     module: {
       rules: [
-        {
-          test: /\.js$/,
-          exclude: /node_modules/,
-          use: {
-            loader: 'babel-loader',
-          },
-        },
+        // {
+        //   test: /\.js$/,
+        //   exclude: /node_modules/,
+        //   use: {
+        //     loader: 'babel-loader',
+        //   },
+        // },
         {
           test: /\.css$/,
           use: [MiniCssExtractPlugin.loader, 'css-loader'],
@@ -59,7 +62,8 @@ module.exports = (env, argv) => {
         inject: 'body',
       }),
       new MiniCssExtractPlugin({
-        filename: '[name].[contenthash].css',
+        // filename: '[name].[contenthash].css',
+        filename: '[name].css',
       }),
       new CopyWebpackPlugin({
         patterns: [
@@ -76,19 +80,24 @@ module.exports = (env, argv) => {
         new TerserPlugin(),
         new CssMinimizerPlugin(), // Минификация CSS
       ],
+      minimize: false,
     },
     devServer: {
       static: path.join(__dirname, 'dist'),
       compress: true,
       port: 9000,
       open: true, // Открытие браузера при запуске сервера
+      // server: {
+      //   type: 'https',
+      //   options: {
+      //     key: fs.readFileSync(path.resolve(__dirname, 'key.pem')),
+      //     cert: fs.readFileSync(path.resolve(__dirname, 'cert.pem')),
+      //   },
+      // },
       server: {
-        type: 'https',
-        options: {
-          key: fs.readFileSync(path.resolve(__dirname, 'key.pem')),
-          cert: fs.readFileSync(path.resolve(__dirname, 'cert.pem')),
-        },
+        type: 'http',
       },
+      
     },
     ignoreWarnings: [
       {

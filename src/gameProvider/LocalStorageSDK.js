@@ -7,6 +7,10 @@ export default class LocalStorageSDK {
         });
     }
 
+    gameIsLoaded() {
+        
+    }
+
     loadSDK() {
         return Promise.resolve();
     }

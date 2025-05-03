@@ -1,15 +1,16 @@
 // @ts-check
 
-import {SubjectMixin, Observer} from './Observer.js';
+import * as observer from './Observer.js';
 import ButtonPanel from './ButtonPanel.js';
 import BackgroundPanel from './BackgroundPanel.js';
 import PlayPanel from './PlayPanel.js';
 import SettingsPanel from './SettingsPanel.js';
+import LanguageSelectPanel from './LanguageSelectPanel.js';
 import AdPanel from './AdPanel.js';
 import WonPanel from './WonPanel.js';
-import {STATUS_GAME, COLOR} from "../../core/tools/constants.js"
+import * as constants from "../../core/tools/constants.js"
 
-export default class UIFacade extends SubjectMixin(Observer) {
+export default class UIFacade extends observer.SubjectMixin(observer.Observer) {
 
     buttonPanel;
 
@@ -40,6 +41,11 @@ export default class UIFacade extends SubjectMixin(Observer) {
         this.settingsPanel.addObserver(this);
         this.addObserver(this.settingsPanel);
 
+        this.isLanguagePanelOpen = false;
+        this.languagePanel = new LanguageSelectPanel(scene, this.isLanguagePanelOpen);
+        this.languagePanel.addObserver(this);
+        this.addObserver(this.languagePanel);
+
         this.isWonPanelOpen = false;
         this.wonPanel = new WonPanel(scene, this.isWonPanelOpen);
         this.wonPanel.addObserver(this);
@@ -65,13 +71,21 @@ export default class UIFacade extends SubjectMixin(Observer) {
         if (data.name === 'backgroundPanel') {
 
             if (event === 'pointerdown') {
-                if (this.isSettingsPanelOpen) {
+                if (this.isLanguagePanelOpen) {
+                    this.toggleLanguagePanel();
+                } else if (this.isSettingsPanelOpen) {
                     this.toggleSettingsPanel();
                 } else if (this.isPlayPanelOpen) {
                     this.togglePlayPanel();
                 } else if (this.isAdPanelOpen) {
                     this.toggleAdPanel();
                 }
+            }
+
+        } else if (data.name === 'settingPanel') {
+            
+            if (event === 'onClickSettingsLanguage') {
+                this.toggleLanguagePanel();
             }
             
         } else if (data.name === 'buttonPanel') {
@@ -127,6 +141,10 @@ export default class UIFacade extends SubjectMixin(Observer) {
 
     onUndoComplite(isCorrect) {
         this.buttonPanel.onEvent('onUndoComplite', isCorrect);
+    }
+
+    onCloseLanguagePanel(isCorrect) {
+        this.settingsPanel.onEvent('onCloseLanguagePanel', isCorrect);
     }
 
     onOpenModalUI(panel, isOpen) {
@@ -284,6 +302,48 @@ export default class UIFacade extends SubjectMixin(Observer) {
         }
     }
 
+    openLanguagePanel() {
+
+        if (this.isAnimating || this.isCooldown) return;
+
+        this.isAnimating = true;
+        
+        const showLanguagePanel = this.languagePanel.open();
+        
+        Promise.all([showLanguagePanel]).then(() => {
+            this.isLanguagePanelOpen = true;
+            this.isAnimating = false;
+            this.startCooldown();
+        });
+    }
+
+    closeLanguagePanel() {
+
+        if (this.isAnimating || this.isCooldown) return;
+
+        this.isAnimating = true;
+
+        const hideLanguagePanel = this.languagePanel.close();
+
+        Promise.all([hideLanguagePanel]).then(() => {
+            this.isLanguagePanelOpen = false;
+            this.isAnimating = false;
+            this.startCooldown();
+            this.onCloseLanguagePanel();
+        });
+    }
+
+    toggleLanguagePanel() {
+        
+        if (this.isAnimating || this.isCooldown) return;
+
+        if (this.isLanguagePanelOpen) {
+            this.closeLanguagePanel();
+        } else {
+            this.openLanguagePanel();
+        }
+    }
+
     openWonPanel(checkAvailability = true) {
 
         if (checkAvailability && (this.isAnimating || this.isCooldown)) return;
@@ -386,12 +446,12 @@ export default class UIFacade extends SubjectMixin(Observer) {
 
     gameStatusHasChanged(currenStatusGame, previousStatusGame) {
         
-        const isGameOver = currenStatusGame === STATUS_GAME.COMPLETED
-            && previousStatusGame === STATUS_GAME.GAME_OVER;
+        const isGameOver = currenStatusGame === constants.STATUS_GAME.COMPLETED
+            && previousStatusGame === constants.STATUS_GAME.GAME_OVER;
 
         if (isGameOver) {
             this.openWonPanel(false);
-        } else if (currenStatusGame === STATUS_GAME.GAME_OVER) {
+        } else if (currenStatusGame === constants.STATUS_GAME.GAME_OVER) {
             this.buttonPanel.disableGameBtn();
             if (this.isButtonPanelOpen) {
                 this.closeButtonPanel();
@@ -403,6 +463,10 @@ export default class UIFacade extends SubjectMixin(Observer) {
 
     resize() {
         this.notify('resize', undefined);
+    }
+
+    updateLocalization() {
+        this.notify('updateLocalization', undefined);
     }
 
     setUndoButtonPanel(value) {

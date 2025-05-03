@@ -1,4 +1,4 @@
-export const STATUS_GAME = {
+const STATUS_GAME = {
     LOAD: 0,
     RESET_START: 1,
     RESET_END: 2,
@@ -12,7 +12,7 @@ export const STATUS_GAME = {
 
 };
 
-export const COLOR = {
+const COLOR = {
     //BACKGROUND: 0x17B978,
     //BACKGROUND: 0x295625,
     //BACKGROUND: 0x2F5E28,
@@ -23,3 +23,5 @@ export const COLOR = {
     YELLOW: 0xfff9db,
     BRIGHT_YELLOW: 0xffb300,
 };
+
+export { STATUS_GAME, COLOR };

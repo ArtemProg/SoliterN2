@@ -36,6 +36,8 @@ export default class ButtonPanel extends Form {
 
         });
 
+        this.updateLocalization();
+
     }
 
     onButtondown(btn, event) {
@@ -94,7 +96,7 @@ export default class ButtonPanel extends Form {
 
         const baseItemSize = 70;
 
-        const localization = scene.cache.json.get('localization');
+        const localization = scene.getLocalization();
 
         const btns = [
             {name: 'Settings', text: `${localization.btn_settings}`, timeOut: 200, awaitCompletion: false},
@@ -233,5 +235,14 @@ export default class ButtonPanel extends Form {
         } else {
             super.drawBackground(x, y, width, height, radius);
         }
+    }
+
+    updateLocalization() {
+        const localization = this.scene.getLocalization();
+        this.#mappedBtns.get('Settings').setText(localization.btn_settings);
+        this.#mappedBtns.get('Magic').setText(localization.btn_magic);
+        this.#mappedBtns.get('Play').setText(localization.btn_play);
+        this.#mappedBtns.get('Hint').setText(localization.btn_hint);
+        this.#mappedBtns.get('Undo').setText(localization.btn_undo);
     }
 }

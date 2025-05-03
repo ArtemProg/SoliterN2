@@ -24,3 +24,5 @@ zip/
 
 # SSL configuration files
 localhost.conf
+
+sdk.js

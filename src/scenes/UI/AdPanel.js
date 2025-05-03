@@ -4,8 +4,6 @@ import BaseButton from "./BaseButton.js"
 export default class AdPanel extends Form {
 
     constructor(scene, isOpen) {
-        
-        const localization = scene.cache.json.get('localization');
 
         const isDesktop = scene.settingsResize.settingDesk.type === 'DESKTOP';
 
@@ -18,7 +16,7 @@ export default class AdPanel extends Form {
         
         const color = 0xffb300;
         
-        this.title = this.scene.add.text(width / 2, 50 / scaleGame, `${localization.label_magic}`)
+        this.title = this.scene.add.text(width / 2, 50 / scaleGame, `label_magic`)
             .setColor('#ffb300')
             .setFontSize(60 / scaleGame)
             .setFontFamily('Arial')
@@ -26,7 +24,7 @@ export default class AdPanel extends Form {
             .setOrigin(0.5, 0.5);
         this.add(this.title);
 
-        this.label = this.scene.add.text(width / 2, (height / 2) * 0.9, `${localization.label_magic_update}`, {lineSpacing: 10 / scaleGame})
+        this.label = this.scene.add.text(width / 2, (height / 2) * 0.9, `label_magic_update`, {lineSpacing: 10 / scaleGame})
             .setColor('#ffb300')
             .setFontSize(55 / scaleGame)
             .setFontFamily('Arial')
@@ -41,10 +39,11 @@ export default class AdPanel extends Form {
             100 / scaleGame,
             color,
             this,
-            {name: 'ShowRewardedAd', text: `${localization.btn_show_ad}`, fontSize: 30 / scaleGame},
+            {name: 'ShowRewardedAd', text: `btn_show_ad`, fontSize: 30 / scaleGame},
             this.onButtondown
         );
         
+        this.updateLocalization();
     }
 
     onButtondown(btn, event) {
@@ -52,6 +51,15 @@ export default class AdPanel extends Form {
         if (btn.name === 'ShowRewardedAd' && event === 'onClick') {
             this.notify('onClickShowRewardedAd', dataEvent);
         }
+    }
+
+    updateLocalization() {
+        const localization = this.scene.getLocalization();
+
+        this.title.setText(localization.label_magic)
+        this.label.setText(localization.label_magic_update);
+        
+        this.btn.setText(localization.btn_show_ad);
     }
     
 }

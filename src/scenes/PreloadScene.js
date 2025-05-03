@@ -3,9 +3,30 @@
 export default class PreloadScene extends Phaser.Scene {
 
     constructor() {
+          
         super('Preload');
         this.sdk = null;
         this.userSettingsManager = null;
+
+        this.availableLanguages = [
+            { key: 'en', name: 'English' },
+            { key: 'es', name: 'Español' },
+            { key: 'fr', name: 'Français' },
+            { key: 'de', name: 'Deutsch' },
+            { key: 'it', name: 'Italiano' },
+            { key: 'pt', name: 'Português' },
+            { key: 'ru', name: 'Русский' },
+            { key: 'pl', name: 'Polski' },
+            { key: 'uk', name: 'Українська' },
+            { key: 'cs', name: 'Čeština' },
+            { key: 'ro', name: 'Română' },
+            { key: 'sr', name: 'Српски' },
+            { key: 'kk', name: 'Қазақша' },
+            { key: 'be', name: 'Беларуская' },
+            { key: 'hy', name: 'Հայերեն' },
+            { key: 'ka', name: 'ქართული' },
+            { key: 'tr', name: 'Türkçe' }
+        ];
     }
 
     init(data) {
@@ -20,6 +41,13 @@ export default class PreloadScene extends Phaser.Scene {
 
     create() {
 
+        // Проверим, какие языки реально были загружены
+        this.availableLanguages = this.availableLanguages.filter(lang => {
+            const data = this.cache.json.get(lang.key);
+            return data && typeof data === 'object';
+        });
+        this.registry.set('availableLanguages', this.availableLanguages);
+        
         new Promise((resolve) => {
             
             if (this.userSettingsManager.settings.isSaved) {
@@ -45,7 +73,17 @@ export default class PreloadScene extends Phaser.Scene {
 
         this.load.atlas('cards', 'assets/atlas/cards.png', 'assets/atlas/cards.json');
         this.load.atlas('icons', 'assets/atlas/icons.png', 'assets/atlas/icons.json');
-        this.load.json('localization', `assets/lang/${this.userSettingsManager.language}.json`);
+        this.load.image('ball', 'assets/images/ball.png');
+        this.load.image('wand', 'assets/images/wand.png');
+        this.load.image('language', 'assets/images/language.png');
+
+        // this.load.json('localization', `assets/lang/${this.userSettingsManager.language}.json`);
+
+        
+
+        for (const lang of this.availableLanguages) {
+            this.load.json(lang.key, `assets/lang/${lang.key}.json`);
+        }
 
     }
     

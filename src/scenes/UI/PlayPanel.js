@@ -31,7 +31,7 @@ export default class PlayPanel extends Form {
         // const posY2 = posY1 + height + 30 / scaleGame;
         // const posY3 = this.height - 100 / scaleGame;
 
-        const localization = scene.cache.json.get('localization');
+        const localization = scene.getLocalization();
 
         const color = 0xffffff;
 
@@ -42,7 +42,7 @@ export default class PlayPanel extends Form {
             props.btn.height,
             color,
             this,
-            {name: 'NewGame', text: `${localization.btn_new_game}`, fontSize: props.btn.fontSize, texture: 'plus'},
+            {name: 'NewGame', text: `btn_new_game`, fontSize: props.btn.fontSize, texture: 'plus'},
             this.onButtondown
         ).setOrigin(0.4);
 
@@ -53,7 +53,7 @@ export default class PlayPanel extends Form {
             props.btn.height,
             color,
             this,
-            {name: 'Replay', text: `${localization.btn_replay}`, fontSize: props.btn.fontSize, texture: 'replay'},
+            {name: 'Replay', text: `btn_replay`, fontSize: props.btn.fontSize, texture: 'replay'},
             this.onButtondown
         ).setOrigin(0.4);
 
@@ -64,10 +64,11 @@ export default class PlayPanel extends Form {
             props.btn.height,
             color,
             this,
-            {name: 'Close', text: `${localization.btn_close}`, fontSize: props.btn.fontSize, texture: 'close'},
+            {name: 'Close', text: `btn_close`, fontSize: props.btn.fontSize, texture: 'close'},
             this.onButtondown
         ).setOrigin(0.4);
 
+        this.updateLocalization();
     }
 
     onButtondown(btn, event) {
@@ -119,16 +120,16 @@ export default class PlayPanel extends Form {
         
         let scaleGame = window.devicePixelRatio * scene.scaleGame * (isDesktop ? 2 : 1);
 
-        let width = 600 / scaleGame;
+        let width = 650 / scaleGame;
 
         if (width >= scene.scale.width * (isPortrait ? 0.8 : 0.5)) {
             width = scene.scale.width * (isPortrait ? 0.8 : 0.5);
-            scaleGame = 600 / width;
+            scaleGame = 650 / width;
         }
 
         let height = isLandscape ? scene.scale.height : 190 * 4 / scaleGame;
 
-        const btn_width = 500 / scaleGame;
+        const btn_width = 550 / scaleGame;
         const btn_height = 130 / scaleGame;
 
         const pecentY = isLandscape ? 1.2 : 1;
@@ -180,8 +181,12 @@ export default class PlayPanel extends Form {
         this.btns[0].setPosition(props.btn.posX, props.btn.posY1);
         this.btns[1].setPosition(props.btn.posX, props.btn.posY2);
         this.btns[2].setPosition(props.btn.posX, props.btn.posY3);
+    }
 
-
-        
+    updateLocalization() {
+        const localization = this.scene.getLocalization();
+        this.btns[0].setText(localization.btn_new_game);
+        this.btns[1].setText(localization.btn_replay);
+        this.btns[2].setText(localization.btn_close);
     }
 }

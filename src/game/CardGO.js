@@ -3,7 +3,7 @@
 /** @typedef {import("../scenes/GameScene.js").default} GameScene */
 /** @typedef {import("../core/Card.js").default} Card */
 
-import {COLOR} from "../core/tools/constants.js";
+import * as constants from "../core/tools/constants.js";
 
 export default class CardGO extends Phaser.GameObjects.Container {
 
@@ -111,7 +111,7 @@ export default class CardGO extends Phaser.GameObjects.Container {
     }
 
     turnOnTinting() {
-        this.#image.setTint(COLOR.YELLOW);
+        this.#image.setTint(constants.COLOR.YELLOW);
     }
 
     turnOffTinting() {

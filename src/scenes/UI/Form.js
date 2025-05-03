@@ -1,8 +1,8 @@
 // @ts-check
 
-import {Observer, SubjectMixin} from './Observer.js';
+import * as observer from './Observer.js';
 
-export default class Form extends SubjectMixin(Observer) {
+export default class Form extends observer.SubjectMixin(observer.Observer) {
     
     constructor(scene, width, height, isOpen, style) {
         super();
@@ -164,6 +164,8 @@ export default class Form extends SubjectMixin(Observer) {
 
         if (event === 'resize') {
             this.resize();
+        } else if (event === 'updateLocalization') {
+            this.updateLocalization();
         }
     }
 
@@ -182,6 +184,10 @@ export default class Form extends SubjectMixin(Observer) {
 
     setInteractiveForChild() {
 
+    }
+
+    updateLocalization() {
+        
     }
 
 }

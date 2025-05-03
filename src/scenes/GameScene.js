@@ -3,7 +3,7 @@
 import ManagerGame from "../game/ManagerGame.js";
 import DataDrag from "../game/DataDrag.js";
 import * as SettingDesk from "./tools/SetingDesk.js"
-import {COLOR} from "../core/tools/constants.js"
+import * as constants from "../core/tools/constants.js"
 
 /** @typedef {import("../game/CardGO.js").default} CardGO */
 /** @typedef {import("../game/SpotGO.js").default} SpotGO */
@@ -60,7 +60,7 @@ export default class GameScene extends Phaser.Scene {
 
     async create() {
 
-        this.cameras.main.setBackgroundColor(COLOR.BACKGROUND);
+        this.cameras.main.setBackgroundColor(constants.COLOR.BACKGROUND);
 
         this.managerGame.init(this.positionsSpots);
 
@@ -68,7 +68,7 @@ export default class GameScene extends Phaser.Scene {
         this.linkToInterfaceScene();
 
         await this.managerGame.gameNewOrReset();
-        this.showAd();
+        this.managerGame.showAd();
         if (this.userSettingsManager.settings.isSaved && this.dataSessionJSON) {
             this.managerGame.loadGameState(this.dataSessionJSON);
         } else {
@@ -128,6 +128,8 @@ export default class GameScene extends Phaser.Scene {
             }
         });
 
+        this.managerGame.gameIsLoaded();
+
     }
 
     saveGameState() {
@@ -149,13 +151,13 @@ export default class GameScene extends Phaser.Scene {
             
             this.resetIdleTimer();
             await this.managerGame.gameNewOrReset(data.isNewGame);
-            await this.showAd();
+            await await this.managerGame.showAd();
             await this.managerGame.dealCards();
             
             //this.managerGame.startGame();
             
  
-         }, this);
+        }, this);
 
         ourUIScene.events.on('runCommandMagic', (data) => {
             
@@ -183,6 +185,12 @@ export default class GameScene extends Phaser.Scene {
             this.resetIdleTimer();
             this.managerGame.showRewardedVideo(data);
 
+        }, this);
+
+        ourUIScene.events.on('changeLanguage', async (data) => {
+            
+            await this.managerGame.changeLanguage(data);
+ 
         }, this);
 
     }
@@ -401,6 +409,14 @@ export default class GameScene extends Phaser.Scene {
             if (dataPointerdown.asyncOperationPromise) {
                 await dataPointerdown.asyncOperationPromise;
                 dataPointerdown.asyncOperationPromise = undefined;
+
+                this.time.delayedCall(300, () => {
+                    this.managerGame.showAd(() => {
+                        this.stopHint();
+                        this.managerGame.putOnPause();
+                    });
+                });
+
             }
             
             if (dataPointerdown.isHandler) {
@@ -463,17 +479,12 @@ export default class GameScene extends Phaser.Scene {
         return this.managerGame.getBestResult();
     }
 
-    resetIdleTimer() {
-        this.managerGame.resetIdleTimer();
+    localize(key, params) {
+        return this.managerGame.localize(key, params);
     }
 
-    async showAd() {
-        try {
-            await this.sdk.showInterstitialAd();
-        } catch (error) {
-            console.error('Error when displaying ads:', error.message);
-            // Дополнительные действия по обработке ошибки
-        }
+    resetIdleTimer() {
+        this.managerGame.resetIdleTimer();
     }
 
 }

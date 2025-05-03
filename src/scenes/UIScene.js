@@ -1,8 +1,8 @@
 // @ts-check
 
-import {STATUS_GAME, COLOR} from "../core/tools/constants.js"
+import * as constants from "../core/tools/constants.js"
 import UIFacade from "./UI/UIFacade.js";
-import { generateTexture } from "./tools/generateTexture.js";
+import * as gt from "./tools/generateTexture.js";
 import HintPanel from './UI/HintPanel.js';
 
 export default class UIScene extends Phaser.Scene
@@ -67,6 +67,8 @@ export default class UIScene extends Phaser.Scene
         this.initUIFacade(ourGame);
 
         this.initResizeGame(ourGame);
+
+        this.initUpdateLocalization(ourGame);
     
     }
 
@@ -90,9 +92,17 @@ export default class UIScene extends Phaser.Scene
         return this.#quantityInStok;
     }
 
+    getLocalization() {
+        return this.#ourGame.managerGame.localization;
+    }
+
+    getLanguage() {
+        return this.userSettingsManager.language;
+    }
+
     initAdditionalInformation(ourGame) {
 
-        const localization = this.cache.json.get('localization');
+        const localization = this.getLocalization();
 
         const fPosSpotStokXY = () => this.settingsResize.settingDesk.positionSpot.find(item => item.name === 'spotStok').spots[0];
 
@@ -200,7 +210,10 @@ export default class UIScene extends Phaser.Scene
 
         this.resultPanel = panel;
 
+        const scene = this;
         ourGame.events.on('updateValueUI', (data) => {
+
+            const localization = scene.getLocalization();
 
             const currenStatusGame = this.#statusGame;
 
@@ -234,9 +247,9 @@ export default class UIScene extends Phaser.Scene
     }
 
     isStatusGameRuning(statusGame) {
-        return statusGame === STATUS_GAME.READY
-            || statusGame === STATUS_GAME.RUNNING
-            || statusGame === STATUS_GAME.PAUSE;
+        return statusGame === constants.STATUS_GAME.READY
+            || statusGame === constants.STATUS_GAME.RUNNING
+            || statusGame === constants.STATUS_GAME.PAUSE;
     }
 
     initUIFacade(ourGame) {
@@ -299,6 +312,10 @@ export default class UIScene extends Phaser.Scene
         this.time.delayedCall(100, () => {
             this.events.emit('showRewardedVideo', {});
         });
+    }
+    
+    onChangeLanguage(data) {
+        this.events.emit('changeLanguage', data);
     }
 
     onOpenModalUI(data) {
@@ -369,12 +386,35 @@ export default class UIScene extends Phaser.Scene
 
     }
 
+    initUpdateLocalization(ourGame) {
+
+        ourGame.events.on('updateLocalization', () => {
+
+            this.time.delayedCall(1, () => { this.updateLocalization(); });
+            
+        });
+
+        this.resizeGame();
+    }
+
+    updateLocalization() {
+        const localization = this.getLocalization();
+        this.resultPanel.labels[0].setText(`${localization.label_score}: ${this.#score}`);
+        this.resultPanel.labels[2].setText(`${localization.label_moves}: ${this.#moves}`);
+
+        this.uiFacade.updateLocalization();
+    }
+
     stopHint() {
         this.#ourGame.stopHint();
     }
 
+    localize(key, params) {
+        return this.#ourGame.localize(key, params);
+    }
+
     getTexture(width, height, radius, color) {
-        return generateTexture(this, width, height, radius, color);
+        return gt.generateTexture(this, width, height, radius, color);
     }
 
 }

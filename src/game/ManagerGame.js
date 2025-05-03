@@ -1,7 +1,7 @@
 // @ts-check
 
 import Croupier from "../core/Croupier.js";
-import {STATUS_GAME, COLOR} from "../core/tools/constants.js";
+import * as constants from "../core/tools/constants.js";
 import SpotGO from "./SpotGO.js";
 import CardGO from "./CardGO.js";
 import FoundationsSpotGO from "./FoundationsSpotGO.js";
@@ -11,7 +11,7 @@ import WasteSpotGO from "./WasteSpotGO.js";
 import CommandCard from "../core/CommandCard.js";
 import CommandHistory from "../core/CommandHistory.js"
 import SoundGame from "./SoundGame.js";
-import { generateTexture } from "../scenes/tools/generateTexture.js";
+import * as gt from "../scenes/tools/generateTexture.js";
 
 /** @typedef {import("../scenes/GameScene.js").default} GameScene */
 /** @typedef {import("../core/Card.js").default} Card */
@@ -86,10 +86,19 @@ export default class ManagerGame {
     /** @type {SpotGO[]} */
     spotsFoundations = [];
 
-   /** @type {Phaser.GameObjects.Sprite[]} */
-   spriteCardsHint = [];
-   /** @type {Phaser.GameObjects.Container} */
-   containerHint;
+    /** @type {Phaser.GameObjects.Sprite[]} */
+    spriteCardsHint = [];
+    /** @type {Phaser.GameObjects.Container} */
+    containerHint;
+
+    /** @type {Phaser.GameObjects.Image} */
+    spriteWand;
+
+    /** @type {Phaser.GameObjects.Image} */
+    wandGlow;
+
+    /** @type {Phaser.GameObjects.Particles.ParticleEmitter} */
+    trailEmitter;
 
     /** @type {Map<Card, CardGO>} */
     #mappedCards = new Map();
@@ -116,6 +125,8 @@ export default class ManagerGame {
     idleTime;
 
     localization;
+    /** @type {[{key: string, name: string}]} */
+    availableLanguages;
 
     get numberOfMoves() {
         return this.#numberOfMoves;
@@ -180,8 +191,7 @@ export default class ManagerGame {
         this.sdk = scene.sdk;
         this.userSettingsManager = scene.userSettingsManager;
 
-        this.localization = scene.cache.json.get('localization');
-
+        this.availableLanguages = scene.registry.get('availableLanguages') || [];
     }
 
     init(positions) {
@@ -189,6 +199,8 @@ export default class ManagerGame {
         if (this.#initialized) {
             return;
         }
+
+        this.setLanguage(this.userSettingsManager.language);
 
         this.#croupier = new Croupier();
         this.#sound = new SoundGame(this.#scene, this);
@@ -201,6 +213,7 @@ export default class ManagerGame {
         this.initHints();
         this.initIdleTime();
         this.initTimer();
+
         this.#initialized = true;
 
     }
@@ -356,7 +369,7 @@ export default class ManagerGame {
 
         this.readBestResult();
 
-        this.statusGame = STATUS_GAME.RESET_START;
+        this.statusGame = constants.STATUS_GAME.RESET_START;
         this.currentDurationOfAnimation = 150;
         
         this.reusableTimerEvent.resetTimer();
@@ -388,13 +401,13 @@ export default class ManagerGame {
 
         this.updateValueUI();
         
-        this.statusGame = STATUS_GAME.RESET_END;
+        this.statusGame = constants.STATUS_GAME.RESET_END;
 
     }
 
     async dealCards() {
 
-        this.statusGame = STATUS_GAME.DEAL;
+        this.statusGame = constants.STATUS_GAME.DEAL;
 
         const cardsGO = this.#croupier.spotStok.cards.map(card => this.#mappedCards.get(card));
         
@@ -463,7 +476,7 @@ export default class ManagerGame {
 
         [this.spotStok, this.spotWaste, ...this.spotsFoundations, ...this.spotsPile].forEach(spotGO => spotGO.updateText());
         
-        this.statusGame = STATUS_GAME.READY;
+        this.statusGame = constants.STATUS_GAME.READY;
     }
 
     async dealCards2() {
@@ -634,7 +647,7 @@ export default class ManagerGame {
                     loop: true,
                     delay: 15000,
                     callback: (item) => {
-                        if (this.statusGame !== STATUS_GAME.RUNNING || !isAutoHints()) return;
+                        if (this.statusGame !== constants.STATUS_GAME.RUNNING || !isAutoHints()) return;
                         console.info("Показать подсказку");
                         const data = {
                             displayText: false,
@@ -650,20 +663,15 @@ export default class ManagerGame {
                     loop: false,
                     callback: (item) => {
                         console.info("Пауза игры");
-                        if (this.statusGame !== STATUS_GAME.RUNNING) return;
-                        this.statusGame = STATUS_GAME.PAUSE;
+                        if (this.statusGame !== constants.STATUS_GAME.RUNNING) return;
+                        this.statusGame = constants.STATUS_GAME.PAUSE;
                         this.reusableTimerEvent.pauseTimer();
-                        try {
-                            this.sdk.showInterstitialAd();
-                        } catch (error) {
-                            console.error('Error when displaying ads:', error.message);
-                        }
                     },
                     isCompleted: false,
                 }
             ],
             checkSchedule: () => {
-                if (this.statusGame !== STATUS_GAME.RUNNING) return;
+                if (this.statusGame !== constants.STATUS_GAME.RUNNING) return;
                 idleTime.time += 1000;
                 for (const item of idleTime.schedule) {
                     if (item.isCompleted) {
@@ -752,19 +760,19 @@ export default class ManagerGame {
     }
 
     startGame() {
-        this.statusGame = STATUS_GAME.STARTING;
+        this.statusGame = constants.STATUS_GAME.STARTING;
         
         this.reusableTimerEvent.resetTimer();
         this.reusableTimerEvent.resumeTimer();
 
-        this.statusGame = STATUS_GAME.RUNNING;
+        this.statusGame = constants.STATUS_GAME.RUNNING;
     }
 
     gameIsOver() {
 
         this.reusableTimerEvent.pauseTimer();
 
-        this.statusGame = STATUS_GAME.COMPLETED;
+        this.statusGame = constants.STATUS_GAME.COMPLETED;
 
         [this.spotStok, this.spotWaste, ...this.spotsFoundations, ...this.spotsPile].forEach(spotGO => spotGO.setVisible(false));
 
@@ -868,13 +876,13 @@ export default class ManagerGame {
 
     checkStatusGameAndRunGame() {
 
-        if (this.statusGame === STATUS_GAME.RUNNING) {
+        if (this.statusGame === constants.STATUS_GAME.RUNNING) {
             return true;
-        } if (this.statusGame === STATUS_GAME.READY) {
+        } if (this.statusGame === constants.STATUS_GAME.READY) {
             this.startGame();
             return true;
-        } if (this.statusGame === STATUS_GAME.PAUSE) {
-            this.statusGame = STATUS_GAME.RUNNING;
+        } if (this.statusGame === constants.STATUS_GAME.PAUSE) {
+            this.statusGame = constants.STATUS_GAME.RUNNING;
             this.reusableTimerEvent.resumeTimer();
             return true;
         }
@@ -1021,7 +1029,7 @@ export default class ManagerGame {
             this.#scene.cardGeometry.width,
             this.#scene.cardGeometry.height + this.#scene.cardGeometry.offsetDragCardY * (cards.length - 1),
             10,
-            COLOR.BLACK
+            constants.COLOR.BLACK
         );
 
         if (!dataDrag.shape) {
@@ -1286,6 +1294,12 @@ export default class ManagerGame {
 
         this.updateValueUI();
 
+        this.#scene.time.delayedCall(300, () => {
+            this.showAd(() => {
+                this.stopHint();
+                this.putOnPause();
+            });
+        });
     }
 
     async moveMyObj(posX, posY, dataDrag, deltaY) {
@@ -1484,10 +1498,10 @@ export default class ManagerGame {
 
     async checkPropertyGame() {
 
-        if (this.statusGame === STATUS_GAME.RUNNING && (this.#croupier.checkFoundationsSpot() || this.#croupier.checkPileSpot())) {
+        if (this.statusGame === constants.STATUS_GAME.RUNNING && (this.#croupier.checkFoundationsSpot() || this.#croupier.checkPileSpot())) {
             
             if (this.isAutoComplite() || this.#croupier.checkFoundationsSpot()) {
-                this.statusGame = STATUS_GAME.GAME_OVER;
+                this.statusGame = constants.STATUS_GAME.GAME_OVER;
                 this.#scene.time.delayedCall(100, this.displayCompletionAndVictory, [], this);
             }
 
@@ -1504,6 +1518,8 @@ export default class ManagerGame {
 
         await this.runAutoSteps();
 
+        await this.playWinAnimation();
+
         this.gameIsOver();
 
     }
@@ -1512,7 +1528,7 @@ export default class ManagerGame {
 
         // Блокируем интерфейс
 
-        if (!this.#croupier.checkPileSpot() || this.statusGame !== STATUS_GAME.GAME_OVER) {
+        if (!this.#croupier.checkPileSpot() || this.statusGame !== constants.STATUS_GAME.GAME_OVER) {
             return;
         }
 
@@ -1544,6 +1560,283 @@ export default class ManagerGame {
             this.addMoves();
 
         }
+    }
+
+    async playWinAnimation() {
+        const animations = [
+            'playVictoryScatterAndExplode',
+            'playWinSimpleAnimation',
+            'playWinCircleAnimation',
+            'playWinBounceAnimation'
+        ];
+    
+        const randomIndex = Phaser.Math.Between(0, animations.length - 1);
+        const methodName = animations[randomIndex];
+    
+        if (typeof this[methodName] === 'function') {
+            await this[methodName]();
+        }
+    }
+    
+
+    async playVictoryScatterAndExplode() {
+        const cardsGO = [...this.#cardsGO];
+        const scene = this.#scene;
+        const screenW = scene.scale.width;
+        const screenH = scene.scale.height;
+    
+        const promises = [];
+    
+        for (let i = 0; i < cardsGO.length; i++) {
+            const cardGO = cardsGO[i];
+    
+            const promise = new Promise(resolve => {
+                const targetX = Phaser.Math.Between(100, screenW - 100);
+                const targetY = Phaser.Math.Between(100, screenH - 100);
+                const angle = Phaser.Math.Between(-360, 360);
+    
+                scene.tweens.add({
+                    targets: cardGO,
+                    x: targetX,
+                    y: targetY,
+                    angle: angle,
+                    ease: 'Sine.easeOut',
+                    duration: 1000,
+                    onComplete: () => {
+                        const frameName = cardGO.fullName;
+                        const textureKey = 'cards';
+    
+                        const emitter = scene.add.particles(0, 0, textureKey, {
+                            frame: frameName,
+                            x: targetX,
+                            y: targetY,
+                            speed: { min: 120, max: 280 },
+                            angle: { min: 0, max: 360 },
+                            scale: { start: 0.4, end: 0.1 },
+                            alpha: { start: 1, end: 0.3 },
+                            lifespan: 1000,
+                            quantity: 1,
+                            blendMode: 'SCREEN',
+                            tint: Phaser.Display.Color.RandomRGB().color
+                        });
+    
+                        scene.time.delayedCall(50, () => {
+                            cardGO.setVisible(false);
+                            resolve();
+                        });
+
+                        scene.time.delayedCall(700, () => {
+                            emitter.stop();
+                        });
+                    }
+                });
+            });
+    
+            promises.push(promise);
+    
+            await new Promise(r => scene.time.delayedCall(100, r));
+        }
+    
+        await Promise.all(promises);
+        
+    }
+    
+    
+    
+    
+
+    
+    async playWinBounceAnimation() {
+        const cardsGO = [...this.#cardsGO];
+        const bounds = this.#scene.cameras.main;
+        const velocities = new Map();
+    
+        // Задаём начальные скорости каждой карте
+        cardsGO.forEach(cardGO => {
+            velocities.set(cardGO, {
+                vx: Phaser.Math.Between(-4, 4),
+                vy: Phaser.Math.Between(-18, -10),
+                rotationSpeed: Phaser.Math.FloatBetween(-0.05, 0.05) // уменьшено вращение
+            });
+    
+            cardGO.setDepth(100); // чтобы были поверх остальных
+        });
+    
+        // Основной цикл анимации прыжков и отскоков
+        const bounceTimer = this.#scene.time.addEvent({
+            delay: 16, // ~60 кадров/сек
+            loop: true,
+            callback: () => {
+                cardsGO.forEach(cardGO => {
+                    const v = velocities.get(cardGO);
+    
+                    // Гравитация
+                    v.vy += 0.5;
+    
+                    // Перемещение
+                    cardGO.x += v.vx;
+                    cardGO.y += v.vy;
+                    cardGO.rotation += v.rotationSpeed;
+    
+                    // Отскок от пола
+                    if (cardGO.y > bounds.height - cardGO.height / 2) {
+                        cardGO.y = bounds.height - cardGO.height / 2;
+                        v.vy *= -0.95; // меньше теряется энергия
+                        v.vx *= 0.99;
+    
+                        // остановка мелкого дёрганья
+                        if (Math.abs(v.vy) < 1 && Math.abs(v.vx) < 0.5) {
+                            v.vy = 0;
+                            v.vx = 0;
+                            v.rotationSpeed = 0;
+                        }
+                    }
+    
+                    // Отскок от потолка
+                    if (cardGO.y < cardGO.height / 2) {
+                        cardGO.y = cardGO.height / 2;
+                        v.vy *= -1;
+                    }
+    
+                    // Отскок от левого/правого края
+                    if (cardGO.x < cardGO.width / 2) {
+                        cardGO.x = cardGO.width / 2;
+                        v.vx *= -1;
+                    } else if (cardGO.x > bounds.width - cardGO.width / 2) {
+                        cardGO.x = bounds.width - cardGO.width / 2;
+                        v.vx *= -1;
+                    }
+                });
+            }
+        });
+    
+        // Остановка через 10 секунд
+        await new Promise(resolve => {
+            this.#scene.time.delayedCall(10000, () => {
+                bounceTimer.remove();
+    
+                this.#cardsGO.forEach(this.resetPositionCardGOWhenWin);
+    
+                resolve();
+            });
+        });
+    }
+    
+    async playWinCircleAnimation() {
+        const allCards = [...this.#cardsGO];
+        const centerX = this.#scene.scale.width / 2;
+        const centerY = this.#scene.scale.height / 2;
+        const baseRadius = Math.min(this.#scene.scale.width, this.#scene.scale.height) * 0.35;
+        let time = 0;
+        const duration = 800;
+    
+        // Расставим карты по кругу
+        for (let i = 0; i < allCards.length; i++) {
+            const angle = (Math.PI * 2 / allCards.length) * i;
+            const targetX = centerX + Math.cos(angle) * baseRadius;
+            const targetY = centerY + Math.sin(angle) * baseRadius;
+    
+            const cardGO = allCards[i];
+            cardGO.setDepth(10); // поверх всего
+    
+            this.#scene.tweens.add({
+                targets: cardGO,
+                x: targetX,
+                y: targetY,
+                angle: Phaser.Math.RadToDeg(angle) + 90,
+                duration,
+                ease: 'Sine.easeInOut'
+            });
+        }
+    
+        // Ждём завершения движения всех карт
+        await new Promise(resolve => {
+            this.#scene.time.delayedCall(duration + 100, resolve);
+        });
+    
+        let angleOffset = 0;
+        let velocity = 0.002; // начальная скорость
+
+        // Запускаем вечное вращение по кругу
+        const winCircleTimer = this.#scene.time.addEvent({
+            delay: 16, // ~60 FPS
+            loop: true,
+            callback: () => {
+
+                time += 0.016; // ~1 кадр (60fps)
+                angleOffset += velocity;
+                velocity += 0.0001; // ускорение
+
+                // Дыхание: синус от времени
+                const breathScale = 1 + Math.sin(time * 2) * 0.05; // от 0.95 до 1.05
+                const dynamicRadius = baseRadius * breathScale;
+
+                for (let i = 0; i < allCards.length; i++) {
+                    const baseAngle = (Math.PI * 2 / allCards.length) * i;
+                    const angle = baseAngle + angleOffset;
+                
+                    const x = centerX + Math.cos(angle) * dynamicRadius;
+                    const y = centerY + Math.sin(angle) * dynamicRadius;
+                
+                    allCards[i].setPosition(x, y);
+                    allCards[i].setRotation(angle + Math.PI / 2);
+                }
+            }
+        });
+    
+        await new Promise(resolve => {
+            this.#scene.time.delayedCall(10000, () => {
+                winCircleTimer.remove();
+                this.#cardsGO.forEach(this.resetPositionCardGOWhenWin);
+                resolve();
+            });
+        });
+
+    }
+    
+    async playWinSimpleAnimation() {
+        // Получаем все активные карты на сцене
+        const allCards = [...this.#cardsGO];
+        const delayBetweenCards = 60;
+    
+        const screenWidth = this.#scene.scale.width;
+        const screenHeight = this.#scene.scale.height;
+
+        const minHorizontalSpread = screenWidth * 0.25; // 25% ширины экрана
+        const maxHorizontalSpread = screenWidth * 0.75; // 25% ширины экрана
+        const minVerticalFall = screenHeight * 0.25;  // 20% вниз
+        const maxVerticalFall = screenHeight * 0.75;  // 40% вниз
+
+
+        for (let i = 0; i < allCards.length; i++) {
+            const cardGO = allCards[i];
+    
+            this.#scene.tweens.add({
+                targets: cardGO,
+                x: cardGO.x + Phaser.Math.Between(-minHorizontalSpread, maxHorizontalSpread),
+                y: cardGO.y + Phaser.Math.Between(minVerticalFall, maxVerticalFall),
+                angle: Phaser.Math.Between(-360, 360),
+                alpha: 0,
+                duration: 1000,
+                ease: 'Cubic.easeOut',
+                onComplete: () => {
+                    this.resetPositionCardGOWhenWin(cardGO);
+                }
+            });
+    
+            await new Promise(resolve => {
+                this.#scene.time.delayedCall(delayBetweenCards, resolve);
+            });
+        }
+
+        return true;
+    
+    }
+    
+    resetPositionCardGOWhenWin(cardGO) {
+        cardGO.setVisible(false)
+            .setAlpha(1)
+            .setRotation(0);
     }
 
     /** @param {CommandCard[]} commandsCard */
@@ -2432,7 +2725,7 @@ export default class ManagerGame {
         }
         
         this.restoreGame(dataSessionJSON);
-        this.statusGame = STATUS_GAME.PAUSE;
+        this.statusGame = constants.STATUS_GAME.PAUSE;
         return true;
     }
 
@@ -2528,6 +2821,12 @@ export default class ManagerGame {
 
         }
         
+        this.#scene.time.delayedCall(300, () => {
+            this.showAd(() => {
+                this.stopHint();
+                this.putOnPause();
+            });
+        });
     }
 
 
@@ -2555,10 +2854,23 @@ export default class ManagerGame {
         }, [], this);
     }
 
+    async showAd(onOpenFunc) {
+        try {
+            return await this.sdk.showInterstitialAd(onOpenFunc);
+        } catch (error) {
+            console.error('Error when displaying ads:', error.message);
+            // Дополнительные действия по обработке ошибки
+        }
+    }
+
+    gameIsLoaded() {
+        this.sdk.gameIsLoaded();
+    }
+
 
     putOnPause() {
-        if (this.statusGame === STATUS_GAME.RUNNING) {
-            this.statusGame = STATUS_GAME.PAUSE;
+        if (this.statusGame === constants.STATUS_GAME.RUNNING) {
+            this.statusGame = constants.STATUS_GAME.PAUSE;
             this.reusableTimerEvent.pauseTimer();
             return true;
         }
@@ -2589,7 +2901,7 @@ export default class ManagerGame {
                     this.scene.cardGeometry.width + 16,
                     this.scene.cardGeometry.height + 16,
                     10,
-                    COLOR.BRIGHT_YELLOW
+                    constants.COLOR.BRIGHT_YELLOW
                 );
                 this.shape = this.scene.add.sprite(0, 0, nameTexture)
                     .setOrigin(0, 0)
@@ -2632,7 +2944,7 @@ export default class ManagerGame {
                     this.initSprite(i)
                         .setTexture('cards', cardGO.fullName)
                         .setOrigin(0, 0)
-                        .setTint(COLOR.YELLOW);
+                        .setTint(constants.COLOR.YELLOW);
                 }
                 this.scene.children.bringToTop(this.container);
             }
@@ -2643,12 +2955,12 @@ export default class ManagerGame {
                     this.scene.cardGeometry.width + _size,
                     this.scene.cardGeometry.height + _size + this.scene.cardGeometry.offsetOpenCardY * (num - 1),
                     10,
-                    COLOR.BRIGHT_YELLOW
+                    constants.COLOR.BRIGHT_YELLOW
                 );
                 this.shape.setTexture(nameTexture)
                     .setPosition(-_size/2, -_size/2)
                     .setVisible(true)
-                    .setTint(COLOR.YELLOW)
+                    .setTint(constants.COLOR.YELLOW)
                     .setAlpha(0.9);
                 this.container.add(this.shape);
             }
@@ -2713,7 +3025,7 @@ export default class ManagerGame {
                 this.scene.children.bringToTop(this.container);
                 this.initShape(1);
                 const sprite = this.initSprite(0);
-                sprite.setTint(COLOR.YELLOW);
+                sprite.setTint(constants.COLOR.YELLOW);
                 let deltaX = 0;
                 if (manager.spotWaste.value.quantity > 2) {
                     deltaX = this.scene.cardGeometry.offsetOpenCardX * 2;
@@ -2935,6 +3247,8 @@ export default class ManagerGame {
         const spotFromGO = this.#mappedSpots.get(spotFrom);
         const spotToGO = this.#mappedSpots.get(spotTo);
 
+        await this.startAnimationWand(cardGO, spotFromGO, spotToGO);
+
         let posX = cardGO.x;
         let posY = cardGO.y;
         if (this.#settingsResize.settingDesk.type === 'LANDSCAPE') {
@@ -3089,6 +3403,8 @@ export default class ManagerGame {
         const spotFromGO = this.#mappedSpots.get(spotFrom);
         const spotToGO = this.#mappedSpots.get(spotTo);
 
+        await this.startAnimationWand(cardGO, spotFromGO, spotToGO);
+
         let posX = cardGO.x;
         let posY = cardGO.y;
         if (this.#settingsResize.settingDesk.type === 'LANDSCAPE') {
@@ -3224,10 +3540,191 @@ export default class ManagerGame {
         return await this.commandUndo_magicMoveCardFirstCard(cards, spotFrom, spotTo);
     }
 
+    /**
+     * @param {CardGO} cardGO 
+     * @param {SpotGO} spotFromGO 
+     * @param {SpotGO} spotToGO 
+     */
+    async startAnimationWand(cardGO, spotFromGO, spotToGO) {
+        //sloa
+
+        const scene = this.#scene;
+        
+        if (!this.spriteWand) {
+            this.spriteWand = scene.add.image(0, 0, "wand")
+                .setScale(1)
+                .setOrigin(0.1, 0.95)
+                .setVisible(false)
+                .setDepth(1);
+
+            const glowTextureKey = gt.createRadialGradientCircleTexture(scene, 120, 'rgba(138,43,226,0.6)', 'rgba(138,43,226,0)');
+            this.wandGlow = scene.add.image(0, 0, glowTextureKey)
+                .setScale(1)
+                
+                .setBlendMode(Phaser.BlendModes.ADD)
+                .setVisible(false)
+                .setDepth(0);
+
+            this.trailEmitter = scene.add.particles(0, 0, 'ball', {
+                //frame: 'star',
+                blendMode: 'ADD',
+                lifespan: 600,
+                quantity: 10,
+                frequency: 50, // как часто создаются партиклы (меньше — чаще)
+                speed: { min: 40, max: 70 },
+                scale: { start: 0.2, end: 0.01 },
+                alpha: { start: 0.03, end: 0.3 },
+                tint: { start: 0x00ffff, end: 0xff00ff } // меняет цвет от голубого к розовому
+            });
+            this.trailEmitter.stop();
+
+            this.attachEmitterToPointOnSprite(scene, this.trailEmitter, this.spriteWand, 46, 20);
+        }
+        
+        const spriteWand = this.spriteWand;
+        const wandGlow = this.wandGlow;
+        const trailEmitter = this.trailEmitter;
+
+        const wandGlowSetPosition = () => {
+            const offsetX = spriteWand.width - 10;
+            const offsetY = 10;
+
+            const point = spriteWand.getWorldTransformMatrix().transformPoint(
+                offsetX - spriteWand.displayOriginX,
+                offsetY - spriteWand.displayOriginY
+            );
+
+            wandGlow.setPosition(point.x, point.y);
+            wandGlow.rotation = spriteWand.rotation;
+        };
+        
+        scene.children.bringToTop(spriteWand);
+
+        const startPosX = scene.scale.width / 2 - spriteWand.width / 2;
+        const startPosY = scene.scale.height + spriteWand.height + 50;
+
+        spriteWand.setPosition(startPosX, startPosY)
+            .setRotation(0)
+            .setVisible(true);
+        
+        wandGlowSetPosition();
+        scene.tweens.killTweensOf(spriteWand);
+
+        const tweensGlow = scene.tweens.add({
+            targets: wandGlow,
+            scaleX: { from: 1.8, to: 2.0 },
+            scaleY: { from: 1.8, to: 2.0 },
+            duration: 800,
+            yoyo: true,
+            repeat: -1
+        });
+
+        wandGlow.x = spriteWand.x;
+        wandGlow.y = spriteWand.y;
+        wandGlow.setVisible(true);
+
+        trailEmitter.start();
+
+        const startX = scene.scale.width / 2 - 50; // справа внизу
+        const startY = scene.scale.height + 50;
+
+        const endX = cardGO.x - spriteWand.width / 2;
+        const endY = cardGO.y + spriteWand.height / 2;
+
+        // Контрольная точка — вершина дуги
+        // Чем ближе к середине по X, и выше по Y — тем круче дуга
+        const midX = (startX + endX) / 2;
+        const maxArcY = Math.min(startY, endY) - 150; // не выше верхней границы
+
+        // Не позволяем выйти за верх экрана
+        const minY = 50; // безопасный отступ от верха
+        const controlY = Math.max(maxArcY, minY);
+
+        const curve = new Phaser.Curves.QuadraticBezier(
+            new Phaser.Math.Vector2(startX, startY),
+            new Phaser.Math.Vector2(midX, controlY),  // дуга
+            new Phaser.Math.Vector2(endX, endY)
+        );
+
+        // Устанавливаем начальную позицию
+        spriteWand.setPosition(startX, startY);
+        spriteWand.setRotation(0);
+        spriteWand.setVisible(true);
+
+        let promise = new Promise((resolve, reject) => {
+            // Полёт по кривой
+            scene.tweens.addCounter({
+                from: 0,
+                to: 1,
+                duration: 2000,
+                ease: 'Sine.easeInOut',
+                onUpdate: tween => {
+                    const t = tween.getValue();
+                    const pos = curve.getPoint(t);
+                    spriteWand.setPosition(pos.x, pos.y);
+                    wandGlowSetPosition();
+                },
+                onComplete: () => {
+                    
+                    scene.tweens.add({
+                        targets: spriteWand,
+                        rotation: Phaser.Math.DegToRad(30),
+                        duration: 180,
+                        yoyo: true,
+                        onComplete: function() {
+            
+                            const matrix = spriteWand.getWorldTransformMatrix();
+                            const tip = matrix.transformPoint(
+                                52 - spriteWand.displayOriginX,
+                                10 - spriteWand.displayOriginY
+                            );
+
+                            scene.time.delayedCall(1000, () => {
+                                spriteWand.setVisible(false);
+                                wandGlow.setVisible(false);
+                                trailEmitter.stop();
+                            });
+                            resolve();
+                        }
+                    });
+
+                    
+                }
+            });
+        });
+        
+        await promise;
+
+        return true;
+
+    }
+
+    /**
+     * Привязывает эмиттер к конкретной точке внутри спрайта
+     * @param {Phaser.Scene} scene — текущая сцена
+     * @param {Phaser.GameObjects.Particles.ParticleEmitter} emitter — эмиттер, который должен следовать за точкой
+     * @param {Phaser.GameObjects.Image} sprite — спрайт, к которому привязана точка
+     * @param {number} localX — локальная X-координата внутри спрайта (в пикселях)
+     * @param {number} localY — локальная Y-координата внутри спрайта (в пикселях)
+     */
+    attachEmitterToPointOnSprite(scene, emitter, sprite, localX, localY) {
+        const anchor = scene.add.container(0, 0).setVisible(false);
+        emitter.follow = anchor;
+
+        scene.events.on('update', () => {
+            const point = sprite.getWorldTransformMatrix().transformPoint(
+                localX - sprite.displayOriginX,
+                localY - sprite.displayOriginY
+            );
+            anchor.setPosition(point.x, point.y);
+        });
+    }
+
+
     isGameRuning() {
-        return this.#statusGame === STATUS_GAME.READY
-            || this.#statusGame === STATUS_GAME.RUNNING
-            || this.#statusGame === STATUS_GAME.PAUSE;
+        return this.#statusGame === constants.STATUS_GAME.READY
+            || this.#statusGame === constants.STATUS_GAME.RUNNING
+            || this.#statusGame === constants.STATUS_GAME.PAUSE;
     }
 
     resetIdleTimer() {
@@ -3235,7 +3732,7 @@ export default class ManagerGame {
     }
 
     getTexture(width, height, radius, color) {
-        return generateTexture(this.#scene, width, height, radius, color);
+        return gt.generateTexture(this.#scene, width, height, radius, color);
     }
 
     localize(key, params) {
@@ -3249,6 +3746,33 @@ export default class ManagerGame {
     onEvent(event, data) {
         if (event === 'saveSettings') {
             this.#sound.updateVolume();
+        } else if (event === 'changeLanguage') {
+            console.log(event, data)
         }
+    }
+
+    setLanguage(language) {
+
+        let availableLanguage;
+
+        if (this.availableLanguages.some(lang => lang.key === language)) {
+            availableLanguage = language;
+        } else if (['be', 'kk', 'uk', 'uz'].some(lang => lang === language)) {
+            availableLanguage = 'ru';
+        } else {
+            availableLanguage = 'en';
+        }
+
+        this.userSettingsManager.language = availableLanguage;
+        
+        this.localization = this.#scene.cache.json.get(this.userSettingsManager.language);
+    }
+
+    changeLanguage(data) {
+
+        this.setLanguage(data.language);
+
+        this.#scene.events.emit('updateLocalization', { language: data.language });
+
     }
 }

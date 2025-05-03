@@ -1,10 +1,9 @@
 import Form from "./Form.js"
-import Button from "./Button.js"
+import SimpleButton from "./SimpleButton.js"
 
 export default class SettingsPanel extends Form {
 
-    baseItemSize = 0;
-    btns = [];
+    activeBtn;
 
     sound = 0;
     autoHints = 0;
@@ -18,11 +17,9 @@ export default class SettingsPanel extends Form {
         super(scene, props.width, props.height, isOpen, {fillStyle: { color: 0x000000, alpha: 0.99  }});
 
         this.scaleGame = props.scaleGame;
-
-        const localization = scene.cache.json.get('localization');
         
         const dataTitle = props.title;
-        this.title = this.scene.add.text(dataTitle.posX, dataTitle.posY, `${localization.label_settings}`)
+        this.title = this.scene.add.text(dataTitle.posX, dataTitle.posY, `label_settings`)
             .setColor('#ffffff')
             .setFontSize(dataTitle.fontSize)
             .setFontFamily('Arial')
@@ -31,7 +28,7 @@ export default class SettingsPanel extends Form {
         this.add(this.title);
 
         const dataRow = props.row;
-        this.labelSound = this.scene.add.text(dataRow.posX1, dataRow.posY1, `${localization.label_sound}`)
+        this.labelSound = this.scene.add.text(dataRow.posX1, dataRow.posY1, `label_sound`)
             .setColor('#ffffff')
             .setFontSize(dataRow.fontSize)
             .setFontFamily('Arial')
@@ -39,7 +36,7 @@ export default class SettingsPanel extends Form {
             .setOrigin(0, 0.5);
         this.add(this.labelSound);
 
-        this.labelHints = this.scene.add.text(dataRow.posX1, dataRow.posY2, `${localization.label_hints}`)
+        this.labelHints = this.scene.add.text(dataRow.posX1, dataRow.posY2, `label_hints`)
             .setColor('#ffffff')
             .setFontSize(dataRow.fontSize)
             .setFontFamily('Arial')
@@ -47,7 +44,7 @@ export default class SettingsPanel extends Form {
             .setOrigin(0, 0.5);
         this.add(this.labelHints);
 
-        this.labelComplite = this.scene.add.text(dataRow.posX1, dataRow.posY3, `${localization.label_complite}`)
+        this.labelComplite = this.scene.add.text(dataRow.posX1, dataRow.posY3, `label_complite`)
             .setColor('#ffffff')
             .setFontSize(dataRow.fontSize)
             .setFontFamily('Arial')
@@ -70,6 +67,26 @@ export default class SettingsPanel extends Form {
             .setInteractive();
         this.add(this.spriteComplite);
 
+        this.labelLang = this.scene.add.text(dataRow.posX1, dataRow.posY4, `label_language`)
+            .setColor('#ffffff')
+            .setFontSize(dataRow.fontSize)
+            .setFontFamily('Arial')
+            .setAlpha(0.7)
+            .setOrigin(0, 0.5);
+        this.add(this.labelLang);
+
+        this.btnLang = new SimpleButton(
+            this,
+            'Language',
+            200,
+            { x: dataRow.posX2, y: dataRow.posY4 },
+            'language',
+            this.onButtondown,
+            true
+        );
+
+        this.updateLocalization();
+        
         this.spriteSound.on('pointerdown', () => {
             this.sound++;
             this.sound = this.sound > 2 ? 0 : this.sound;
@@ -85,6 +102,34 @@ export default class SettingsPanel extends Form {
             this.autoComplite = this.autoComplite ? 0 : 1;
             this.showValue();
         });
+
+    }
+
+    onButtondown(btn, event) {
+        
+        if (this.isCooldown) {
+            return false;
+        }
+
+        this.activeBtn = undefined;
+
+        if (btn.awaitCompletion) {
+            this.isCooldown = true;
+            this.activeBtn = btn;
+        }
+
+        const dataEvent = {name: 'settingPanel'};
+        if (btn.name === 'Language' && event === 'onClick') {
+            this.notify('onClickSettingsLanguage', dataEvent);
+        } else {
+            return false;
+        }
+
+        if (!btn.awaitCompletion) {
+            this.startCooldown(btn.delay);
+        }
+        
+        return true;
     }
 
     open() {
@@ -160,11 +205,13 @@ export default class SettingsPanel extends Form {
                 posY1: 250 / scaleGame,
                 posY2: 350 / scaleGame,
                 posY3: 450 / scaleGame,
+                posY4: 550 / scaleGame,
                 fontSize: 50 / scaleGame,
                 scale: 2 / scaleGame
             },
             width: width,
             height: height,
+            scaleGame: scaleGame,
         };
 
     }
@@ -183,6 +230,7 @@ export default class SettingsPanel extends Form {
         this.labelSound.setFontSize(props.row.fontSize);
         this.labelHints.setFontSize(props.row.fontSize);
         this.labelComplite.setFontSize(props.row.fontSize);
+        this.labelLang.setFontSize(props.row.fontSize);
 
         this.title.setPosition(props.title.posX, props.title.posY);
         
@@ -194,6 +242,44 @@ export default class SettingsPanel extends Form {
         this.spriteHints.setPosition(props.row.posX2, props.row.posY2);
         this.spriteComplite.setPosition(props.row.posX2, props.row.posY3);
 
-        //
+        this.btnLang.resize( {x: props.row.posX2, y: props.row.posY4} );
     }
+
+    onEvent(event, data) {
+
+        super.onEvent(event, data);
+
+        let btn;
+
+        if (event === 'onCloseLanguagePanel') {
+            btn = this.btnLang;
+        }
+
+        if (btn) {
+            let callback;
+            if (btn === this.activeBtn) {
+                callback = () => {
+                    this.isCooldown = false;
+                    this.activeBtn = undefined;
+                }
+            }
+            btn.commandIsComplite(callback);
+        }
+    }
+
+    updateLocalization() {
+        const localization = this.scene.getLocalization();
+
+        const langs = this.scene.registry.get('availableLanguages') || [];
+        const lang = langs.find(lang => lang.key === this.scene.userSettingsManager.language);
+
+        const textLanguage = this.scene.localize('label_language', { lang: lang.name || this.scene.userSettingsManager.language });
+
+        this.title.setText(localization.label_settings);
+        this.labelSound.setText(localization.label_sound);
+        this.labelHints.setText(localization.label_hints);
+        this.labelComplite.setText(localization.label_complite);
+        this.labelLang.setText(textLanguage);
+    }
+    
 }

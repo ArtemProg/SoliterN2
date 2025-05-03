@@ -115,6 +115,10 @@ export default class BaseButton {
         this.label.setFontSize(fontSize);
         return this;
     }
+
+    setText(text) {
+        this.label.setText(text);
+    }
     
     setOrigin(x = 0.5, y = 0.5) {
         this.label.setOrigin(x, y);

@@ -1,7 +1,7 @@
 // @ts-check
-import {Observer, SubjectMixin} from './Observer.js';
+import * as observer from './Observer.js';
 
-export default class HintPanel extends SubjectMixin(Observer) {
+export default class HintPanel extends observer.SubjectMixin(observer.Observer) {
     
     constructor(scene, isOpen) {
         
