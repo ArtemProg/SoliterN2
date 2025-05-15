@@ -148,7 +148,10 @@ export default class UIFacade extends observer.SubjectMixin(observer.Observer) {
     }
 
     onOpenModalUI(panel, isOpen) {
-        this.scene.onOpenModalUI({isOpen: isOpen});
+        this.scene.onOpenModalUI({
+            isOpen: isOpen,
+            isAds: panel === this.adPanel
+        });
     }
 
     openButtonPanel() {
@@ -409,7 +412,7 @@ export default class UIFacade extends observer.SubjectMixin(observer.Observer) {
             this.isBackgroundPanelOpen = true;
             this.isAdPanelOpen = true;
             this.isAnimating = false;
-            this.onOpenModalUI(this.wonPanel, this.isWonPanelOpen);
+            this.onOpenModalUI(this.adPanel, this.isWonPanelOpen);
             this.startCooldown();
         });
     }
@@ -429,7 +432,7 @@ export default class UIFacade extends observer.SubjectMixin(observer.Observer) {
             this.isAdPanelOpen = false;
             this.isButtonPanelOpen = true;
             this.isAnimating = false;
-            this.onOpenModalUI(this.wonPanel, this.isWonPanelOpen);
+            this.onOpenModalUI(this.adPanel, this.isWonPanelOpen);
             this.startCooldown();
         });
     }

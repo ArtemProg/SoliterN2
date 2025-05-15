@@ -9,6 +9,10 @@ export default class YandexSDK extends GameSDK {
     constructor() {
         super();
         this.sdk = null;
+
+        this.lastSubmitTime = 0;
+        this.SUBMIT_DELAY = 1000;
+
         this.requestCounters = {
             getPlayerStats: { count: 0, limit: 60, interval: 60000, timer: null, lastRequestTime: 0 },
             setPlayerStats: { count: 0, limit: 60, interval: 60000, timer: null, lastRequestTime: 0 },
@@ -58,7 +62,14 @@ export default class YandexSDK extends GameSDK {
             YaGames.init()
                 .then(sdk => {
                     this.sdk = sdk;
-                    resolve();
+
+                    return sdk.getStorage().then(safeStorage => {
+
+                        Object.defineProperty(window, 'localStorage', { get: () => safeStorage });
+                        localStorage.setItem('key', 'safe storage is working');
+
+                        resolve();
+                    });
                 })
                 .catch(error => {
                     reject(error);
@@ -132,30 +143,29 @@ export default class YandexSDK extends GameSDK {
     });
   }
 
-    showInterstitialAd(onOpenFunc) {
-        return this._throttleRequest('showInterstitialAd', () => {
-            return new Promise((resolve, reject) => {
-                if (this.sdk) {
-                    this.sdk.adv.showFullscreenAdv({
-                        callbacks: {
-                            onOpen: () => {
-                                console.log('Interstitial ad opened');
-                                if (onOpenFunc) onOpenFunc();
-                            },
-                            onClose: () => {
-                                console.log('Interstitial ad closed');
-                                resolve();
-                            },
-                            onError: err => {
-                                console.error('Error showing interstitial ad:', err);
-                                reject(err);
-                            }
+    showInterstitialAd(onOpenFunc, onCloseFunc) {
+        return new Promise((resolve, reject) => {
+            if (this.sdk) {
+                this.sdk.adv.showFullscreenAdv({
+                    callbacks: {
+                        onOpen: () => {
+                            console.log('Interstitial ad opened');
+                            if (onOpenFunc) onOpenFunc();
+                        },
+                        onClose: (wasShown) => {
+                            console.log('Interstitial ad closed');
+                            if (onOpenFunc) onCloseFunc(wasShown);
+                            resolve();
+                        },
+                        onError: err => {
+                            console.error('Error showing interstitial ad:', err);
+                            reject(err);
                         }
-                    });
-                } else {
-                    reject(new Error('SDK not initialized'));
-                }
-            });
+                    }
+                });
+            } else {
+                reject(new Error('SDK not initialized'));
+            }
         });
     }
 
@@ -166,13 +176,21 @@ export default class YandexSDK extends GameSDK {
                     this.sdk.getPlayer().then(player => {
                         player.getStats()
                             .then(data => {
-                            const settings = {
-                                language: this.lang()
-                            };
-                            if (data) {
-                                Object.assign(settings, data);
-                            }
-                            resolve(settings);
+                            
+                                const settings = {};
+
+                                if (data) {
+                                    Object.assign(settings, data);
+                                    if (settings.language) {
+                                        settings.language = this.numberToLangCode(settings.language);
+                                    }
+                                }
+
+                                if (!settings.language) {
+                                    settings.language = this.lang();
+                                }
+                                
+                                resolve(settings);
                             })
                             .catch(err => reject(err));
                     }).catch(err => reject(err));
@@ -235,7 +253,69 @@ export default class YandexSDK extends GameSDK {
         });
     }
 
+    tryUpdateLeaderboardScore(newScoreToAdd) {
+
+        // const now = Date.now();
+        
+        // if (now - this.lastSubmitTime < this.SUBMIT_DELAY) {
+        //     console.warn("⚠️ Слишком частая отправка очков. Подожди немного.");
+        //     return;
+        // }
+        
+        // this.lastSubmitTime = now;
+        
+        // this.sdk.getLeaderboards().then(lb => {
+
+        //     return new Promise((resolve, reject) => {
+        //         lb.getLeaderboardPlayerEntry('leaderboard2021')
+        //     });
+        // });
+
+        // .then(lb => {
+        //     lb.setLeaderboardScore('lbBestScore', score).then(() => {
+        //         console.log('✅ Очки отправлены в лидерборд');
+        //     }).catch(err => {
+        //         console.error('❌ Ошибка при отправке очков:', err);
+        //     });
+        // }).catch(err => {
+        //     console.error('❌ Ошибка при получении лидерборда:', err);
+        // });
+
+        const leaderboardName = 'lbBestScore'; // Замени на своё имя лидерборда
+        
+        this.sdk.getLeaderboards()
+          .then(lb => {
+            return lb.getLeaderboardPlayerEntry(leaderboardName)
+              .then(entry => {
+                const currentScore = entry.score || 0;
+                const updatedScore = currentScore + newScoreToAdd;
+                return lb.setLeaderboardScore(leaderboardName, updatedScore);
+              })
+              .catch(err => {
+                if (err.code === 'LEADERBOARD_PLAYER_NOT_PRESENT') {
+                  // У пользователя ещё нет записи — установим новый результат
+                  return lb.setLeaderboardScore(leaderboardName, newScoreToAdd);
+                } else {
+                  throw err;
+                }
+              });
+          })
+          .then(() => {
+            console.log('Score updated successfully');
+          })
+          .catch(err => {
+            console.error('Failed to update score:', err);
+          }); 
+
+    }
+
     lang() {
         return this.sdk.environment.i18n.lang;
+    }
+
+    numberToLangCode(num) {
+        const hex = num.toString(16);
+        const chars = hex.match(/.{1,2}/g); // каждые 2 символа (1 байт)
+        return chars.map(h => String.fromCharCode(parseInt(h, 16))).join('');
     }
 }

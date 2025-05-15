@@ -14,21 +14,24 @@ export default class UserSettingsManager {
             bestMoves: 0,
             bestTime: 0,
             numberOfGamesCompleted: 0,
-            isSaved: 0
+            isSaved: 0,
+            language: 'en',
         };
         this.pendingChanges = {};
-        this.language = 'en';
 
         this.#observers = [];
+    }
+
+    get language() {
+        return this.settings.language;
     }
 
     loadSettings() {
         return this.sdkProvider.getPlayerStats()
             .then(data => {
                 if (data) {
-                    const { language, ...settings } = data;
+                    const { ...settings } = data;
                     Object.assign(this.settings, settings);
-                    this.language = language;
                 }
                 console.log('Settings loaded:', this.settings);
                 return true;
@@ -45,9 +48,14 @@ export default class UserSettingsManager {
 
         this.notify('saveSettings', this);
 
-        return this.sdkProvider.setPlayerStats(this.settings)
+        let settings = {};
+        Object.assign(settings, this.settings);
+
+        settings.language = this.langCodeToNumber(settings.language);
+
+        return this.sdkProvider.setPlayerStats(settings)
             .then(() => {
-                console.log('Settings saved:', this.settings);
+                console.log('Settings saved:', settings);
             })
             .catch(err => {
                 console.error('Failed to save settings:', err);
@@ -76,6 +84,10 @@ export default class UserSettingsManager {
         } else {
             throw new Error('Invalid autoComplite level');
         }
+    }
+
+    setLanguage(language) {
+        this.pendingChanges.language = language;
     }
 
     updateBestScore(score) {
@@ -109,7 +121,7 @@ export default class UserSettingsManager {
     }
 
     getSettings() {
-        return { ...this.settings, ...this.pendingChanges, language: this.language };
+        return { ...this.settings, ...this.pendingChanges };
     }
 
     saveGameSession(dataSessionJSON) {
@@ -118,6 +130,10 @@ export default class UserSettingsManager {
 
     getGameSession() {
         return this.sdkProvider.getGameSession();
+    }
+
+    updateLeaderboardScore(newScoreToAdd) {
+        return this.sdkProvider.tryUpdateLeaderboardScore(newScoreToAdd);
     }
 
     addObserver(observer) {
@@ -133,4 +149,10 @@ export default class UserSettingsManager {
             observer.onEvent(event, data);
         }
     }
+
+    langCodeToNumber(code) {
+        // Преобразуем строку в число через код символов
+        return parseInt([...code].map(c => c.charCodeAt(0).toString(16)).join(''), 16);
+    }
+
 }

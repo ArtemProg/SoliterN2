@@ -128,6 +128,8 @@ export default class ManagerGame {
     /** @type {[{key: string, name: string}]} */
     availableLanguages;
 
+    displayOfAds;
+
     get numberOfMoves() {
         return this.#numberOfMoves;
     }
@@ -213,6 +215,11 @@ export default class ManagerGame {
         this.initHints();
         this.initIdleTime();
         this.initTimer();
+
+        this.displayOfAds = {
+            lastAdTimestamp: Number(localStorage.getItem("lastAdTimestamp") || 0),
+            intervalSmartAd: 1 * 60 * 1000,
+        };
 
         this.#initialized = true;
 
@@ -379,12 +386,13 @@ export default class ManagerGame {
 
         this.numberOfMoves = 0;
         this.numberOfScore = 0;
-        this.numberOfMagic = 2;
+        this.numberOfMagic = 200;
         
         this.#croupier.mixAndTransferToSpotStok(isNewGame);
 
         [this.spotStok, this.spotWaste, ...this.spotsFoundations, ...this.spotsPile].forEach(spotGO => {
             spotGO.updateText();
+            spotGO.updatePositionShadow();
             spotGO.setVisible(true);
         });
 
@@ -474,164 +482,12 @@ export default class ManagerGame {
         
         await Promise.all(promises);
 
-        [this.spotStok, this.spotWaste, ...this.spotsFoundations, ...this.spotsPile].forEach(spotGO => spotGO.updateText());
+        [this.spotStok, this.spotWaste, ...this.spotsFoundations, ...this.spotsPile].forEach(spotGO => {
+            spotGO.updateText();
+            spotGO.updatePositionShadow();
+        });
         
         this.statusGame = constants.STATUS_GAME.READY;
-    }
-
-    async dealCards2() {
-
-        const posX = this.#scene.scale.width / 2 - this.#scene.cardGeometry.width;
-        const posY = this.#scene.scale.height + this.#scene.cardGeometry.height / 2;
-
-        let cardsToMove = [];
-        const cards = this.#croupier.spotStok.cards;
-        const cardsGO = cards.map(card => this.#mappedCards.get(card));
-
-        let currentIndex = this.#cardsGO.length;
-        let maxIndex = currentIndex - 1;
-
-        const moveToCardsGO = [];
-        const f = (i, j, posY2) => {
-            currentIndex--;
-            moveToCardsGO.push({
-                cardGO: cardsGO[currentIndex],
-                spotGO: this.spotsPile[j],
-                x: this.spotsPile[j].x,
-                y: posY2,
-                delay: (maxIndex - currentIndex) * 17,
-                open: i === j,
-            });
-        };
-
-        for (let i = 0; i < 7; i++) {
-            const posY2 = this.spotsPile[0].y + i * this.#scene.cardGeometry.offsetCloseCardY;
-            if ((i + 1) % 2 !== 0) {
-                for (let j = i; j < 7; j++) {
-                    f(i, j, posY2);
-                }
-            } else {
-                for (let j = 6; j >= i; j--) {
-                    f(i, j, posY2);
-                }
-            }
-        }
-
-        let delay = moveToCardsGO[moveToCardsGO.length - 1].delay + 2;
-        for (let i = maxIndex; currentIndex > 0; i--) {
-            currentIndex--;
-            moveToCardsGO[i] = {
-                cardGO: cardsGO[currentIndex],
-                spotGO: this.spotStok,
-                x: this.spotStok.x,
-                y: this.spotStok.y,
-                delay: delay + (maxIndex - currentIndex) * 10,
-            };
-        }
-
-       
-        this.#sound.deal();
-
-        const promises = [];
-        for (const str of moveToCardsGO) {
-
-            str.cardGO.visible = true;
-            str.cardGO.setPosition(posX, posY);
-
-            this.#scene.children.bringToTop(str.cardGO);
-            this.#moveCardCore(str.spotGO, str.cardGO);
-
-            const promise = new Promise((resolve, reject) => {
-
-                this.#scene.tweens.add({
-                    targets: str.cardGO,
-                    x: str.x,
-                    y: str.y,
-                    ease: 'Quint.out',
-                    duration: 350,
-                    delay: str.delay,
-                    onComplete: () => {
-                        // @ts-ignore
-                        if (str.open) {
-                            str.cardGO.flip(true, () => {
-                                this.#setOpenCard(str.cardGO);
-                                this.#scene.input.setDraggable(str.cardGO, true);
-                                resolve();
-                            }, 100, 10);
-                        } else {
-                            resolve();
-                        }
-                    }
-                });
-
-            });
-            promises.push(promise);
-        }
-        
-        await Promise.all(promises);
-
-        [this.spotStok, this.spotWaste, ...this.spotsFoundations, ...this.spotsPile].forEach(spotGO => spotGO.updateText());
-        
-    }
-
-    dealCards1() {
-
-        let cardsToMove = [];
-        const cards = this.#croupier.spotStok.cards;
-
-        let currentIndex = this.#cardsGO.length;
-        for (let numberOfCards = 1; numberOfCards <= this.spotsPile.length; numberOfCards++) {
-            currentIndex -= numberOfCards;
-            cardsToMove.push({
-                spotGO: this.spotsPile[numberOfCards - 1],
-                cardsGO: cards
-                    .slice(currentIndex, currentIndex + numberOfCards)
-                    .map(card => this.#mappedCards.get(card))
-                    .reverse(),
-            });
-        }
-
-        const scene = this.#scene;
-        const mngr = this;
-        for (let str of cardsToMove) {
-
-            const lastCardGO = str.cardsGO[str.cardsGO.length - 1];
-
-            const posX = str.spotGO.x;
-            const posY = str.spotGO.y;
-            let deltaY = 0;
-            for (const cardGO of str.cardsGO) {
-                
-                this.#moveCardCore(str.spotGO, cardGO);
-
-                this.#scene.children.bringToTop(cardGO);
-
-                scene.tweens.add({
-                    targets: cardGO,
-                    x: posX,
-                    y: posY + deltaY,
-                    ease: 'Linear',
-                    duration: 750,
-                    onComplete: () => {
-                        if (lastCardGO == cardGO) {
-                            cardGO.flip(true, () => {
-                                mngr.#setOpenCard(cardGO);
-                                scene.input.setDraggable(cardGO, true);
-                            }, 100);
-                        }
-                    }
-                });
-
-                deltaY += this.#scene.cardGeometry.offsetCloseCardY;
-
-            }
-
-            str.spotGO.updateText();
-  
-        }
-        
-        this.spotStok.updateText();
-        
     }
 
     initIdleTime() {
@@ -790,18 +646,6 @@ export default class ManagerGame {
      * @param {CardGO} cardGO 
      */
     #moveCardCore(spotGO, cardGO) {
-        /*
-        if (this.#debugMode) {
-
-            const currentSpotGO = this.#mappedSpots.get(this.#croupier.cardLocation(cardGO.value));
-            this.#croupier.moveCard(spotGO.value, cardGO.value);
-            currentSpotGO.updateText();
-            spotGO.updateText();
-
-        } else {
-            this.#croupier.moveCard(spotGO.value, cardGO.value);
-        }
-        */
         this.#croupier.moveCard(spotGO.value, cardGO.value);
     }
 
@@ -1108,6 +952,12 @@ export default class ManagerGame {
 
         dataDrag.availableSpotsPileGO = availableSpotsGO(this.spotsPile);
         dataDrag.availableSpotsFoundationsGO = availableSpotsGO(this.spotsFoundations);
+        
+        if (dataDrag.spotGO instanceof WasteSpotGO) {
+            dataDrag.spotGO.updatePositionShadow(Math.min(dataDrag.spotGO.value.quantity, 3) - dataDrag.cardsGO.length);
+        } else {
+            dataDrag.spotGO.updatePositionShadow(dataDrag.spotGO.value.quantity - dataDrag.cardsGO.length);
+        }
 
         this.#scene.events.emit('dragStart');
         
@@ -1290,16 +1140,13 @@ export default class ManagerGame {
 
         }
 
+        dataDrag.spotGO.updatePositionShadow();
+
         this.#scene.events.emit('dragEnd');
 
         this.updateValueUI();
 
-        this.#scene.time.delayedCall(300, () => {
-            this.showAd(() => {
-                this.stopHint();
-                this.putOnPause();
-            });
-        });
+        this.showAd();
     }
 
     async moveMyObj(posX, posY, dataDrag, deltaY) {
@@ -1373,7 +1220,7 @@ export default class ManagerGame {
         
         const cards = [];
 
-        for (let i = 0; i < spotGO.value.cards.length; i++) {
+        for (let i = 0; i < spotGO.value.quantity; i++) {
             
             const cardGO = this.#mappedCards.get(spotGO.value.cards[i]);
 
@@ -1519,6 +1366,8 @@ export default class ManagerGame {
         await this.runAutoSteps();
 
         await this.playWinAnimation();
+
+        this.userSettingsManager.updateLeaderboardScore(this.numberOfScore);
 
         this.gameIsOver();
 
@@ -1842,30 +1691,35 @@ export default class ManagerGame {
     /** @param {CommandCard[]} commandsCard */
     calculateScores(commandsCard) {
         let sum = 0;
+        const ratio = 3;
         for (const commandCard of commandsCard) {
             if (commandCard.name === 'openCard') {
                 if (commandCard.spotFrom === commandCard.spotTo
                     && commandCard.spotFrom.name.toLowerCase().includes('pile')) {
-                        sum += 5;
+                        sum += 5 * ratio;
                     }
             } else if (commandCard.name === 'moveCard') {
                 if (commandCard.spotTo.name.toLowerCase().includes('foundations')) {
                     if (!commandCard.spotFrom.name.toLowerCase().includes('foundations')) {
-                        sum += 10;
+                        sum += 10 * ratio;
                     }
                 } else if (commandCard.spotTo.name.toLowerCase().includes('pile')){
                     if (commandCard.spotFrom.name.toLowerCase().includes('waste')) {
-                        sum += 5;
+                        sum += 5 * ratio;
                     }
                 } else if (commandCard.spotFrom.name.toLowerCase().includes('foundations')) {
                     if (!commandCard.spotTo.name.toLowerCase().includes('foundations')) {
-                        sum -= 10;
+                        sum -= 10 * ratio;
                     }
                 } else if (commandCard.spotFrom.name.toLowerCase().includes('pile')){
                     if (commandCard.spotTo.name.toLowerCase().includes('waste')) {
-                        sum -= 5;
+                        sum -= 5 * ratio;
                     }
                 }
+            } else if (commandCard.name === 'magicMoveCardFirstCard'
+                || commandCard.name === 'magicMoveCardLastCard'
+                || commandCard.name === 'magicMoveAnyClosedCardToFreeSpace') {
+                sum += 15 * ratio;
             }
         }
         return Math.max(0, sum)
@@ -1939,6 +1793,11 @@ export default class ManagerGame {
      */
     async command_openCard(cards, spotFrom, spotTo) {
 
+        const currentSpotGO = this.#mappedSpots.get(spotFrom);
+        if (currentSpotGO instanceof PileSpotGO) {
+            currentSpotGO.updatePositionShadow(spotFrom.quantity - 1);
+        }
+
         const cardGO = this.#mappedCards.get(cards[0]); 
         const promise = new Promise((resolve, reject) => {
             cardGO.flip(true, () => {
@@ -1948,6 +1807,8 @@ export default class ManagerGame {
         const result = await promise;
         this.#setOpenCard(cardGO);
         this.#scene.input.setDraggable(cardGO, true);
+
+        currentSpotGO.updatePositionShadow();
 
         return true;
     }
@@ -1959,6 +1820,11 @@ export default class ManagerGame {
      */
     async commandUndo_openCard(cards, spotFrom, spotTo) {
 
+        const currentSpotGO = this.#mappedSpots.get(spotFrom);
+        if (currentSpotGO instanceof PileSpotGO) {
+            currentSpotGO.updatePositionShadow(spotFrom.quantity - 1);
+        }
+
         const cardGO = this.#mappedCards.get(cards[0]); 
         const promise = new Promise((resolve, reject) => {
             cardGO.flip(false, () => {
@@ -1968,6 +1834,8 @@ export default class ManagerGame {
         const result = await promise;
         this.#setCloseCard(cardGO);
         this.#scene.input.setDraggable(cardGO, false);
+
+        currentSpotGO.updatePositionShadow();
 
         return true;
     }
@@ -2050,6 +1918,10 @@ export default class ManagerGame {
 
         cardGO.setImageOpen();
 
+        if (this.spotStok.value.quantity === 1) {
+            this.spotStok.updatePositionShadow(0);
+        }
+
         const results = await Promise.all(promises);
 
         this.#setOpenCard(cardGO);
@@ -2057,6 +1929,8 @@ export default class ManagerGame {
         this.#moveCardCore(this.spotWaste, cardGO);
         this.spotWaste.updateText();
         this.spotStok.updateText();
+        this.spotWaste.updatePositionShadow();
+        this.spotStok.updatePositionShadow();
 
         return true;
     }
@@ -2106,7 +1980,8 @@ export default class ManagerGame {
                 });
             });
             promises.push(promise3);
-
+        } else {
+            this.spotWaste.updatePositionShadow(this.spotWaste.value.quantity - 1);
         }
 
         // const promise1 = new Promise((resolve, reject) => {
@@ -2139,6 +2014,8 @@ export default class ManagerGame {
         this.#moveCardCore(this.spotStok, cardGO);
         this.spotWaste.updateText();
         this.spotStok.updateText();
+        this.spotWaste.updatePositionShadow();
+        this.spotStok.updatePositionShadow();
 
         return true;
     }
@@ -2160,6 +2037,8 @@ export default class ManagerGame {
         // if (this.spotWaste.y !== this.spotStok.y) {
         //     posY = Math.round(this.spotWaste.y - (this.spotWaste.y - this.spotStok.y) / 3);
         // }
+
+        this.spotWaste.updatePositionShadow(0);
 
         const promise = new Promise((resolve, reject) => {
             // this.#scene.tweens.add({
@@ -2201,6 +2080,9 @@ export default class ManagerGame {
         this.spotStok.updateText();
         this.spotWaste.updateText();
 
+        this.spotStok.updatePositionShadow();
+        this.spotWaste.updatePositionShadow();
+
         return true;
     }
 
@@ -2231,6 +2113,7 @@ export default class ManagerGame {
 
         const posXEnd = this.spotWaste.x;
 
+        this.spotStok.updatePositionShadow(0);
         const promise = new Promise((resolve, reject) => {
             // this.#scene.tweens.add({
             //     targets: cardsGO,
@@ -2288,6 +2171,9 @@ export default class ManagerGame {
 
         this.spotStok.updateText();
         this.spotWaste.updateText();
+
+        this.spotStok.updatePositionShadow();
+        this.spotWaste.updatePositionShadow();
 
         return true;
     }
@@ -2426,6 +2312,12 @@ export default class ManagerGame {
         });
         promises.push(promise);
 
+        if (spotToGO instanceof WasteSpotGO || spotFromGO instanceof WasteSpotGO) {
+            let quantity = this.spotWaste.value.quantity;
+            quantity = quantity > 2 ? 2 : quantity === 2 ? 1 : 0;
+            this.spotWaste.updatePositionShadow(quantity);
+        }
+
         const results = await Promise.all(promises);
 
         for (let card of cards) {
@@ -2435,6 +2327,9 @@ export default class ManagerGame {
 
         spotFromGO.updateText();
         spotToGO.updateText();
+
+        spotFromGO.updatePositionShadow();
+        spotToGO.updatePositionShadow();
 
         if (spotToGO instanceof FoundationsSpotGO && !(spotFromGO instanceof FoundationsSpotGO)) {
             this.completionToFoundations(spotToGO, cardsGO);
@@ -2449,6 +2344,7 @@ export default class ManagerGame {
      * @param {Spot} spotTo 
      */
     async commandUndo_moveCard(cards, spotFrom, spotTo) {
+        this.#mappedSpots.get(spotTo).updatePositionShadow(spotTo.quantity - cards.length);
         return await this.command_moveCard(cards, spotTo, spotFrom);
     }
 
@@ -2473,7 +2369,6 @@ export default class ManagerGame {
             const currentSpot = this.#croupier.cardLocation(cardGO.value);
             const indexCard = currentSpot.indexOf(cardGO.value);
             const cardsGO = currentSpot.cards.slice(indexCard).map(card => this.#mappedCards.get(card));
-
             
             this.#sound.shake();
             const promise = new Promise((resolve, reject) => {
@@ -2518,11 +2413,25 @@ export default class ManagerGame {
             return true;
         }
 
+        const cards = result.spotFrom.cards.slice(result.indexCard);
+        const spotGO = this.#mappedSpots.get(result.spotFrom);
+        if (spotGO instanceof WasteSpotGO) {
+            const lenght = result.spotFrom.quantity;
+            if (lenght <= 1) {
+                spotGO.updatePositionShadow(0);
+            } else if (lenght === 2) {
+                spotGO.updatePositionShadow(1)
+            } else {
+                spotGO.updatePositionShadow(2)
+            }
+            
+        } 
+
         // Команда перемещения на новую позицию
         const commad = new CommandCard(
             this,
             'moveCard',
-            result.spotFrom.cards.slice(result.indexCard),
+            cards,
             result.spotFrom,
             result.spotTo);
 
@@ -2546,6 +2455,8 @@ export default class ManagerGame {
             commandsCard.push(commad2);
 
         }
+
+        currentSpotGO.updatePositionShadow(result.spotFrom.quantity - cards.length);
 
         await this.executeCommands(commandsCard);
         this.addMoves();
@@ -2624,6 +2535,7 @@ export default class ManagerGame {
                     }
                 }
                 spotGO.updateText();
+                spotGO.updatePositionShadow();
                 indexSpot++;
             }
         }
@@ -2690,7 +2602,10 @@ export default class ManagerGame {
         
         this.#cardsGO.forEach(cardGO => cardGO.visible = true);
 
-        [this.spotStok, this.spotWaste, ...this.spotsFoundations, ...this.spotsPile].forEach(spotGO => spotGO.updateText());
+        [this.spotStok, this.spotWaste, ...this.spotsFoundations, ...this.spotsPile].forEach(spotGO => {
+            spotGO.updateText();
+            spotGO.updatePositionShadow();
+        });
 
         this.updateValueUI();
 
@@ -2816,17 +2731,11 @@ export default class ManagerGame {
         this.stopHint();
 
         if (data.isOpen) {
-
             this.putOnPause();
-
         }
-        
-        this.#scene.time.delayedCall(300, () => {
-            this.showAd(() => {
-                this.stopHint();
-                this.putOnPause();
-            });
-        });
+        if (!data.isAds) {
+            this.showAd();
+        }
     }
 
 
@@ -2854,13 +2763,47 @@ export default class ManagerGame {
         }, [], this);
     }
 
-    async showAd(onOpenFunc) {
-        try {
-            return await this.sdk.showInterstitialAd(onOpenFunc);
-        } catch (error) {
-            console.error('Error when displaying ads:', error.message);
-            // Дополнительные действия по обработке ошибки
-        }
+    async showAd(isAuto = true) {
+        
+        const now = Date.now();
+        const displayOfAds = this.displayOfAds;
+        
+        const deltaTime = now - displayOfAds.lastAdTimestamp;
+        if (isAuto) {
+            if (deltaTime < displayOfAds.intervalSmartAd) return;
+        } else if (deltaTime < 60_000) {
+            return;
+        };
+
+        if (displayOfAds.isActive) return;
+
+        return new Promise(resolve => {
+
+            this.#scene.time.delayedCall(isAuto ? 250 : 1, () => {
+                try {
+                    this.sdk.showInterstitialAd(
+                        () => {
+                            displayOfAds.isActive = true;
+                            this.stopHint();
+                            this.putOnPause();
+                        },
+                        (wasShown) => {
+                            displayOfAds.isActive = false;
+                            if (wasShown) {
+                                displayOfAds.lastAdTimestamp = Date.now();
+                                localStorage.setItem("lastAdTimestamp", displayOfAds.lastAdTimestamp.toString());
+                            }
+                            resolve();
+                        }
+                    );
+                } catch (error) {
+                    console.error('Error when displaying ads:', error?.message || error);
+                    // Дополнительные действия по обработке ошибки
+                    resolve();
+                }
+            });
+        });
+        
     }
 
     gameIsLoaded() {
@@ -3022,9 +2965,9 @@ export default class ManagerGame {
             showStepToWaste(callback, delay = 0) {
                 this.hide();
                 this.setPosition(manager.spotStok.x, manager.spotStok.y);
-                this.scene.children.bringToTop(this.container);
                 this.initShape(1);
                 const sprite = this.initSprite(0);
+                this.scene.children.bringToTop(this.container);
                 sprite.setTint(constants.COLOR.YELLOW);
                 let deltaX = 0;
                 if (manager.spotWaste.value.quantity > 2) {
@@ -3330,6 +3273,9 @@ export default class ManagerGame {
         spotFromGO.updateText();
         spotToGO.updateText();
 
+        spotFromGO.updatePositionShadow();
+        spotToGO.updatePositionShadow();
+
         /** @param {Spot} spot */
         const f = (spot) => {
             if (spot.quantity) {
@@ -3355,6 +3301,11 @@ export default class ManagerGame {
         const spotFromGO = this.#mappedSpots.get(spotFrom);
         const spotToGO = this.#mappedSpots.get(spotTo);
 
+        const currentSpot = this.#mappedSpots.get(spotTo);
+        // if (currentSpot instanceof PileSpotGO) {
+            currentSpot.updatePositionShadow(spotTo.quantity - 1);
+        // }
+
         let promise = new Promise((resolve, reject) => {
             cardGO.magicShowHide(false, resolve, 500);
         });
@@ -3374,6 +3325,9 @@ export default class ManagerGame {
 
         spotFromGO.updateText();
         spotToGO.updateText();
+
+        spotFromGO.updatePositionShadow();
+        spotToGO.updatePositionShadow();
 
         /** @param {Spot} spot */
         const f = (spot) => {
@@ -3404,6 +3358,8 @@ export default class ManagerGame {
         const spotToGO = this.#mappedSpots.get(spotTo);
 
         await this.startAnimationWand(cardGO, spotFromGO, spotToGO);
+
+        //spotFromGO.updatePositionShadow(spotTo.quantity - 1, { removeCardGO: cardGO });
 
         let posX = cardGO.x;
         let posY = cardGO.y;
@@ -3499,6 +3455,9 @@ export default class ManagerGame {
 
         spotFromGO.updateText();
         spotToGO.updateText();
+
+        spotFromGO.updatePositionShadow();
+        spotToGO.updatePositionShadow();
 
         /** @param {Spot} spot */
         const f = (spot) => {
@@ -3763,7 +3722,8 @@ export default class ManagerGame {
             availableLanguage = 'en';
         }
 
-        this.userSettingsManager.language = availableLanguage;
+        this.userSettingsManager.setLanguage(availableLanguage);
+        this.#scene.userSettingsManager.saveSettings();
         
         this.localization = this.#scene.cache.json.get(this.userSettingsManager.language);
     }

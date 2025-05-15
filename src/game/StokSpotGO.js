@@ -13,6 +13,11 @@ export default class StokSpotGO extends SpotGO {
         this.add(this.image);
         this.image.alpha = 0.9;
 
+        this.image = this.scene.add.sprite(scene.cardGeometry.width / 2, scene.cardGeometry.height / 2, 'cards', 'circleUI');
+        this.image.setOrigin(0.5, 0.5);
+        this.add(this.image);
+        this.image.alpha = 0.9;
+
     }
     
 }

@@ -68,7 +68,7 @@ export default class GameScene extends Phaser.Scene {
         this.linkToInterfaceScene();
 
         await this.managerGame.gameNewOrReset();
-        this.managerGame.showAd();
+        this.managerGame.showAd(false);
         if (this.userSettingsManager.settings.isSaved && this.dataSessionJSON) {
             this.managerGame.loadGameState(this.dataSessionJSON);
         } else {
@@ -117,15 +117,19 @@ export default class GameScene extends Phaser.Scene {
                 console.log('visibilitychange - hidden');
 
                 this.stopHint();
-
                 this.managerGame.putOnPause();
-
                 this.saveGameState();
 
             } else if (document.visibilityState === 'visible') {
                 // Страница снова видима, можно восстановить состояние
                 console.log('visibilitychange - visible');
             }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            this.stopHint();
+            this.managerGame.putOnPause();
+            this.saveGameState();
         });
 
         this.managerGame.gameIsLoaded();
@@ -151,7 +155,7 @@ export default class GameScene extends Phaser.Scene {
             
             this.resetIdleTimer();
             await this.managerGame.gameNewOrReset(data.isNewGame);
-            await await this.managerGame.showAd();
+            await await this.managerGame.showAd(false);
             await this.managerGame.dealCards();
             
             //this.managerGame.startGame();
@@ -395,6 +399,7 @@ export default class GameScene extends Phaser.Scene {
             
             dataClicked.gameObject = undefined;
 
+
         }, this);
 
         this.input.on('pointerup', async (pointer, currentlyOver) => {
@@ -409,17 +414,10 @@ export default class GameScene extends Phaser.Scene {
             if (dataPointerdown.asyncOperationPromise) {
                 await dataPointerdown.asyncOperationPromise;
                 dataPointerdown.asyncOperationPromise = undefined;
-
-                this.time.delayedCall(300, () => {
-                    this.managerGame.showAd(() => {
-                        this.stopHint();
-                        this.managerGame.putOnPause();
-                    });
-                });
-
             }
-            
+
             if (dataPointerdown.isHandler) {
+                this.managerGame.showAd();
                 return;
             } if (dataPointerdown.wasDragged && !dataPointerdown.wasClicked) {
                 return;

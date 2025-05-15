@@ -43,5 +43,14 @@ export default class PileSpotGO extends SpotGO {
         return pos;
     }
 
+    getSizeShadow(length) {
+        const size = super.getSizeShadow(length);
+        for (let i = 0; i < size.length - 1; i++) {
+            const card = this.value.cards[i];
+            size.height +=card.isOpen ? size.cardGeometry.offsetOpenCardY : size.cardGeometry.offsetCloseCardY;
+        }
+        return size;
+    }
+
 
 }

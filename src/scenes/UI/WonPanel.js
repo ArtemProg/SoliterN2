@@ -371,6 +371,9 @@ export default class WonPanel extends Form {
         this.time.setText(localization.label_time);
         this.moves.setText(localization.label_moves);
 
+        this.btns[0].setText(localization.btn_menu);
+        this.btns[1].setText(localization.btn_new_game);
+
         this.bestTitle.setText(`----- ( ${localization.best_title} )-----`);
     }
 }

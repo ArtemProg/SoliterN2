@@ -75,11 +75,7 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.atlas('icons', 'assets/atlas/icons.png', 'assets/atlas/icons.json');
         this.load.image('ball', 'assets/images/ball.png');
         this.load.image('wand', 'assets/images/wand.png');
-        this.load.image('language', 'assets/images/language.png');
-
-        // this.load.json('localization', `assets/lang/${this.userSettingsManager.language}.json`);
-
-        
+        this.load.image('language', 'assets/images/language.png');  
 
         for (const lang of this.availableLanguages) {
             this.load.json(lang.key, `assets/lang/${lang.key}.json`);

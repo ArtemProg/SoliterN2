@@ -47,6 +47,12 @@ export default class SpotGO extends Phaser.GameObjects.Container {
         this.shape.setOrigin(0.5, 0.5);
         this.shape.visible = false;
         this.add(this.shape);
+
+        this.shadow = this.scene.add.sprite(0, 0, this.getNameTexture());
+        this.shadow.setOrigin(0, 0);
+        this.shadow.setAlpha(0.5);
+        //this.shadow.visible = false;
+        this.add(this.shadow);
         
         if (this.#scene.managerGame.debugMode) {
             this.#labelDebug = this.#scene.make.text({
@@ -69,6 +75,7 @@ export default class SpotGO extends Phaser.GameObjects.Container {
             draggable: false
         });
 
+        this.updatePositionShadow();
     }
 
     updateText() {
@@ -157,6 +164,49 @@ export default class SpotGO extends Phaser.GameObjects.Container {
         this.shape.scale = 1;
         this.shape.visible = false;
         this.shape.alpha = 0.9;
+    }
+
+    getNameTexture(length = null) {
+        const currentLength = length === null ? this.value.quantity : length;
+        const size = this.getSizeShadow(length);
+        return this.#scene.managerGame.getTexture(
+            size.width,
+            size.height,
+            10,
+            constants.COLOR.BLACK
+        );
+    }
+
+    getSizeShadow(length = null) {
+        const currentLength = length === null ? this.value.quantity : length;
+        return {
+            width: this.#scene.cardGeometry.width,
+            height: this.#scene.cardGeometry.height,
+            cardGeometry: this.#scene.cardGeometry,
+            length: currentLength,
+        }
+    }
+
+    updatePositionShadow(length = null, options = null) {
+        const currentLength = length === null ? this.value.quantity : length;
+
+        const delta = this.getGroupFromValue(currentLength);
+        
+        const posXY = this.getPositionShadow(options);
+        this.shadow
+            .setPosition(posXY.x + delta, posXY.y + delta)
+            .setTexture(this.getNameTexture(length))
+            .setVisible(!!currentLength);
+    }
+
+    getPositionShadow(options) {
+        return { x: 0, y: 0 };
+    }
+
+    getGroupFromValue(value) {
+        if (value === 0) return 0;
+        const clamped = Math.max(1, Math.min(value, 13)); // ограничиваем от 1 до 13
+        return Math.ceil((clamped / 13) * 4) + 3;
     }
 
 }
