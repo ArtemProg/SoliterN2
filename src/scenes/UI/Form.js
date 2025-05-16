@@ -132,12 +132,21 @@ export default class Form extends observer.SubjectMixin(observer.Observer) {
                 onComplete: () => {
                     this.isOpen = isOpen;
                     this.setPosition(pos.x, pos.y);
+                    this.isOpen ? this.onCompleteOpen() : this.onCompleteClose();
                     resolve();
                 }
             });
 
         });
         return promise;
+    }
+
+    onCompleteOpen() {
+
+    }
+
+    onCompleteClose() {
+        
     }
 
     getPosition(isOpen) {

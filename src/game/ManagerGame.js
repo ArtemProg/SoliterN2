@@ -386,9 +386,11 @@ export default class ManagerGame {
 
         this.numberOfMoves = 0;
         this.numberOfScore = 0;
-        this.numberOfMagic = 200;
+        this.numberOfMagic = 200; // sloa
         
         this.#croupier.mixAndTransferToSpotStok(isNewGame);
+
+        this.#cardsGO.forEach(this.resetPositionCardGOWhenWin);
 
         [this.spotStok, this.spotWaste, ...this.spotsFoundations, ...this.spotsPile].forEach(spotGO => {
             spotGO.updateText();
@@ -1396,6 +1398,21 @@ export default class ManagerGame {
                 commandName = 'moveCardsFromWasteToStok';
             } else {
                 commandName = 'moveCard';
+
+                const spotFromGO = this.#mappedSpots.get(step.spotFrom);
+                if (spotFromGO instanceof WasteSpotGO) {
+                    const lenght = step.spotFrom.quantity;
+                    if (lenght <= 1) {
+                        spotFromGO.updatePositionShadow(0);
+                    } else if (lenght === 2) {
+                        spotFromGO.updatePositionShadow(1)
+                    } else {
+                        spotFromGO.updatePositionShadow(2)
+                    }
+                } else {
+                    spotFromGO.updatePositionShadow(step.spotFrom.quantity - 1);
+                }
+
             }
 
             commandsCard[0] = new CommandCard(
@@ -1471,6 +1488,7 @@ export default class ManagerGame {
     
                         scene.time.delayedCall(50, () => {
                             cardGO.setVisible(false);
+                            this.resetPositionCardGOWhenWin(cardGO);
                             resolve();
                         });
 
@@ -1484,8 +1502,9 @@ export default class ManagerGame {
             promises.push(promise);
     
             await new Promise(r => scene.time.delayedCall(100, r));
+
         }
-    
+        
         await Promise.all(promises);
         
     }
@@ -2414,18 +2433,6 @@ export default class ManagerGame {
         }
 
         const cards = result.spotFrom.cards.slice(result.indexCard);
-        const spotGO = this.#mappedSpots.get(result.spotFrom);
-        if (spotGO instanceof WasteSpotGO) {
-            const lenght = result.spotFrom.quantity;
-            if (lenght <= 1) {
-                spotGO.updatePositionShadow(0);
-            } else if (lenght === 2) {
-                spotGO.updatePositionShadow(1)
-            } else {
-                spotGO.updatePositionShadow(2)
-            }
-            
-        } 
 
         // Команда перемещения на новую позицию
         const commad = new CommandCard(
@@ -2456,7 +2463,18 @@ export default class ManagerGame {
 
         }
 
-        currentSpotGO.updatePositionShadow(result.spotFrom.quantity - cards.length);
+        if (currentSpotGO instanceof WasteSpotGO) {
+            const lenght = result.spotFrom.quantity;
+            if (lenght <= 1) {
+                currentSpotGO.updatePositionShadow(0);
+            } else if (lenght === 2) {
+                currentSpotGO.updatePositionShadow(1)
+            } else {
+                currentSpotGO.updatePositionShadow(2)
+            }
+        }  else {
+            currentSpotGO.updatePositionShadow(result.spotFrom.quantity - cards.length);
+        }
 
         await this.executeCommands(commandsCard);
         this.addMoves();
@@ -2750,7 +2768,7 @@ export default class ManagerGame {
         let result = false;
         try {
             result = await this.sdk.showRewardedAd();
-            this.addMagic(2);
+            result && this.addMagic(2);
         } catch (error) {
             console.error('Error when displaying ads:', error.message);
         }
@@ -2849,6 +2867,7 @@ export default class ManagerGame {
                 this.shape = this.scene.add.sprite(0, 0, nameTexture)
                     .setOrigin(0, 0)
                     .setVisible(false);
+                this.container.setDepth(10);
             }
             setText(text) {
                 if (!this.displayText) return;
@@ -3192,6 +3211,10 @@ export default class ManagerGame {
 
         await this.startAnimationWand(cardGO, spotFromGO, spotToGO);
 
+        if (spotFromGO instanceof WasteSpotGO && spotFrom.lastCard() === cards[0]) {
+            spotFromGO.updatePositionShadow(Math.min(spotFrom.quantity, 3) - 1);
+        }
+
         let posX = cardGO.x;
         let posY = cardGO.y;
         if (this.#settingsResize.settingDesk.type === 'LANDSCAPE') {
@@ -3273,17 +3296,15 @@ export default class ManagerGame {
         spotFromGO.updateText();
         spotToGO.updateText();
 
-        spotFromGO.updatePositionShadow();
-        spotToGO.updatePositionShadow();
-
         /** @param {Spot} spot */
         const f = (spot) => {
+            this.#mappedSpots.get(spot).updatePositionShadow();
             if (spot.quantity) {
                 const cardsGO = spot.cards.map(card => this.#mappedCards.get(card));
                 this.correctPositionCardsGO(cardsGO);
             }
         };
-
+        
         f(spotFrom);
         f(spotTo);
 
@@ -3300,16 +3321,19 @@ export default class ManagerGame {
         const cardGO = this.#mappedCards.get(cards[0]);
         const spotFromGO = this.#mappedSpots.get(spotFrom);
         const spotToGO = this.#mappedSpots.get(spotTo);
-
-        const currentSpot = this.#mappedSpots.get(spotTo);
-        // if (currentSpot instanceof PileSpotGO) {
-            currentSpot.updatePositionShadow(spotTo.quantity - 1);
-        // }
+        
+        if (spotTo.lastCard() === cards[0]) {
+            spotToGO.updatePositionShadow(spotTo.quantity - 1);
+        }
 
         let promise = new Promise((resolve, reject) => {
             cardGO.magicShowHide(false, resolve, 500);
         });
         await promise;
+
+        if (spotFromGO instanceof WasteSpotGO && spotFrom.lastCard() === cards[2]) {
+            spotFromGO.updatePositionShadow(Math.min(spotFrom.quantity, 3) - 1);
+        }
 
         if (spotFromGO !== this.spotWaste) {
             this.#setCloseCard(cardGO);
@@ -3326,11 +3350,9 @@ export default class ManagerGame {
         spotFromGO.updateText();
         spotToGO.updateText();
 
-        spotFromGO.updatePositionShadow();
-        spotToGO.updatePositionShadow();
-
         /** @param {Spot} spot */
         const f = (spot) => {
+            this.#mappedSpots.get(spot).updatePositionShadow();
             const cardsGO = spot.cards.map(card => this.#mappedCards.get(card));
             this.correctPositionCardsGO(cardsGO);
         };

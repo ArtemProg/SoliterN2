@@ -9,6 +9,8 @@ export default class LanguageSelectPanel extends Form {
     #mappedBtns;
     currentLanguage;
 
+    _scrollData;
+
     constructor(scene, isOpen) {
 
         const props = LanguageSelectPanel.getBaseSettings(scene);
@@ -17,9 +19,10 @@ export default class LanguageSelectPanel extends Form {
         
         this.availableLanguages = scene.registry.get('availableLanguages') || [];
 
-
-
         const dataRow = props.row;
+
+        this.content = scene.add.container(0, 0);
+        this.add(this.content); // добавляем внутрь формы
 
         this.btns = [];
         this.#mappedBtns = new Map();
@@ -32,20 +35,127 @@ export default class LanguageSelectPanel extends Form {
                 .setFontFamily('Arial')
                 .setAlpha(0.7)
                 .setOrigin(0, 0.5);
-            this.add(labelLang);
+            //this.add(labelLang);
 
             const spriteLang = this.scene.add.sprite(dataRow.posX2, dataRow.fnPosY(index), 'icons', 'toggleON')
                 .setScale(dataRow.scale)
                 .setInteractive();
-            this.add(spriteLang);
+            //this.add(spriteLang);
 
             spriteLang.on('pointerdown', () => {
                 this.onSwitchLanguage(lang.key);
             });
 
+            this.content.add([labelLang, spriteLang]);
             this.btns[index] = spriteLang;
             this.#mappedBtns.set(lang.key, spriteLang);
         });
+
+        this._scrollData = {
+            maskRect: null,
+            mask: null,
+            scrollEnabled: false,
+        };
+
+        this.setupMask();
+        this.enableScroll();
+    }
+
+    destroy() {
+
+        this._scrollData.maskRect?.destroy();
+        this._scrollData.maskRect = null;
+        this._scrollData.mask = null;
+
+        this.scene.input.off('wheel'); // Удаляем обработчик
+        super.destroy?.(); // если в родителе есть destroy
+    }
+
+    setupMask() {
+        
+        // Удаляем старую маску, если есть
+        if (this._scrollData.maskRect) {
+            this._scrollData.maskRect.destroy();
+            this._scrollData.maskRect = null;
+            this._scrollData.mask = null;
+        }
+
+        // Создаём прямоугольник-маску без отрисовки
+        const maskRect = this.scene.add.rectangle(this.x, this.y, this.width, this.height, 0x16FF2E)
+            .setOrigin(0)
+            .setVisible(false); // не отображается, только геометрия
+
+        const mask = maskRect.createGeometryMask();
+
+        this.content.setMask(mask);
+        this.content.setPosition(0, 0);
+
+        this._scrollData.maskRect = maskRect;
+        this._scrollData.mask = mask;
+
+        // const posXY = this.getPosition(true);
+        // this._scrollData.maskRect = this.scene.add.rectangle(posXY.x, posXY.y, this.width, this.height, 0x000000).setOrigin(0.5, 0.5)//.setVisible(false);
+        // this._scrollData.mask = this._scrollData.maskRect.createGeometryMask();
+        // this.content.setMask(this._scrollData.mask);
+        // //maskRect.setPosition(this.x, this.y);
+    }
+
+    enableScroll() {
+        if (this._scrollData.scrollEnabled) return;
+        this._scrollData.scrollEnabled = true;
+
+        this.scene.input.on('wheel', (_pointer, _gameObjects, _dx, dy) => {
+            this.content.y -= dy;
+            this.limitScroll();
+        });
+
+        let dragging = false;
+        let startY = 0;
+
+        this.scene.input.on('pointerdown', (pointer) => {
+            const localY = pointer.y - this.container.y;
+            if (localY < 0 || localY > this.height) return;
+            dragging = true;
+            startY = pointer.y;
+        });
+
+        this.scene.input.on('pointerup', () => {
+            dragging = false;
+        });
+
+        this.scene.input.on('pointermove', (pointer) => {
+            if (!pointer.isDown || !dragging) return;
+
+            const delta = pointer.y - startY;
+            this.content.y += delta;
+            startY = pointer.y;
+            this.limitScroll();
+        });
+    }
+
+    getContentHeight() {
+        let minY = Infinity;
+        let maxY = -Infinity;
+
+        this.content.iterate(child => {
+            if (!child.getBounds) return;
+
+            const bounds = child.getBounds();
+            minY = Math.min(minY, bounds.y);
+            maxY = Math.max(maxY, bounds.y + bounds.height);
+        });
+
+        return maxY - minY;
+    }
+
+    limitScroll() {
+        const visibleHeight = this.height;
+        const contentHeight = this.getContentHeight(); // вручную посчитали
+
+        const minY = Math.min(visibleHeight - contentHeight, 0);
+        const maxY = 0;
+
+        this.content.y = Phaser.Math.Clamp(this.content.y, minY, maxY);
     }
 
     onSwitchLanguage(language) {
@@ -66,6 +176,7 @@ export default class LanguageSelectPanel extends Form {
     }
 
     open() {
+        
         this.currentLanguage = this.scene.getLanguage();
         this.updateButtons();
         return super.open();
@@ -79,6 +190,11 @@ export default class LanguageSelectPanel extends Form {
         }
 
         return super.close();
+    }
+
+    onCompleteOpen() {
+        this.setupMask();
+        this.limitScroll();
     }
 
     static getBaseSettings(scene) {
@@ -124,6 +240,9 @@ export default class LanguageSelectPanel extends Form {
         this.scaleGame = props.scaleGame;
 
         super.resize();
+
+        this.setupMask();
+        this.limitScroll();
 
     }
 

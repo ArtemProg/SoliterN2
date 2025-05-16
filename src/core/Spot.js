@@ -148,6 +148,16 @@ export default class Spot {
     /**
      * @returns {Card|undefined}
      */
+    firstCard() {
+        if (this.#cards.length == 0) {
+            return undefined;
+        }
+        return this.#cards[0];
+    }
+
+    /**
+     * @returns {Card|undefined}
+     */
     lastCard() {
         if (this.#cards.length == 0) {
             return undefined;
