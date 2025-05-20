@@ -154,7 +154,7 @@ export default class YandexSDK extends GameSDK {
                         },
                         onClose: (wasShown) => {
                             console.log('Interstitial ad closed');
-                            if (onOpenFunc) onCloseFunc(wasShown);
+                            if (onCloseFunc) onCloseFunc(wasShown);
                             resolve();
                         },
                         onError: err => {
@@ -181,13 +181,11 @@ export default class YandexSDK extends GameSDK {
 
                                 if (data) {
                                     Object.assign(settings, data);
-                                    if (settings.language) {
+                                    if (settings.language && settings.isLanguageSaved) {
                                         settings.language = this.numberToLangCode(settings.language);
+                                    } else {
+                                        settings.language = '';
                                     }
-                                }
-
-                                if (!settings.language) {
-                                    settings.language = this.lang();
                                 }
                                 
                                 resolve(settings);

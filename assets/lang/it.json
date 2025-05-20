@@ -26,5 +26,6 @@
     "magic_updated": "Magia ripristinata",
     "magic_no_updated": "Ripristino rifiutato",
     "label_magic_update": "La magia richiede\n\nripristino",
-    "label_language": "Lingua: {lang}"
+    "label_language": "Lingua: {lang}",
+    "label_title": ""
 }

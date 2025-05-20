@@ -13,15 +13,12 @@ module.exports = (env, argv) => {
   return {
     entry: './src/main.js',
     output: {
-      // filename: 'bundle.[contenthash].js',
-      filename: 'bundle.js',
+      filename: 'bundle.[contenthash].js',
       path: path.resolve(__dirname, 'dist'),
       clean: true,
     },
-    // mode: isProduction ? 'production' : 'development',
-    mode: 'development',
-    // devtool: isProduction ? 'source-map' : 'inline-source-map', // Включение source maps
-    devtool: false,
+    mode: isProduction ? 'production' : 'development',
+    devtool: isProduction ? 'source-map' : 'inline-source-map', // Включение source maps
     resolve: {
       alias: {
         'phaser': path.resolve(__dirname, 'node_modules/phaser/dist/phaser.min.js')
@@ -29,13 +26,13 @@ module.exports = (env, argv) => {
     },
     module: {
       rules: [
-        // {
-        //   test: /\.js$/,
-        //   exclude: /node_modules/,
-        //   use: {
-        //     loader: 'babel-loader',
-        //   },
-        // },
+        {
+          test: /\.js$/,
+          exclude: /node_modules/,
+          use: {
+            loader: 'babel-loader',
+          },
+        },
         {
           test: /\.css$/,
           use: [MiniCssExtractPlugin.loader, 'css-loader'],
@@ -62,8 +59,7 @@ module.exports = (env, argv) => {
         inject: 'body',
       }),
       new MiniCssExtractPlugin({
-        // filename: '[name].[contenthash].css',
-        filename: '[name].css',
+        filename: '[name].[contenthash].css',
       }),
       new CopyWebpackPlugin({
         patterns: [
@@ -80,7 +76,6 @@ module.exports = (env, argv) => {
         new TerserPlugin(),
         new CssMinimizerPlugin(), // Минификация CSS
       ],
-      minimize: false,
     },
     devServer: {
       static: path.join(__dirname, 'dist'),
@@ -97,7 +92,6 @@ module.exports = (env, argv) => {
       server: {
         type: 'http',
       },
-      
     },
     ignoreWarnings: [
       {

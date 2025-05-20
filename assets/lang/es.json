@@ -26,5 +26,6 @@
     "magic_updated": "Magia restaurada",
     "magic_no_updated": "Recarga rechazada",
     "label_magic_update": "La magia requiere\n\nrecuperación",
-    "label_language": "Idioma: {lang}"
+    "label_language": "Idioma: {lang}",
+    "label_title": ""
 }

@@ -50,7 +50,7 @@ export default class SpotGO extends Phaser.GameObjects.Container {
 
         this.shadow = this.scene.add.sprite(0, 0, this.getNameTexture());
         this.shadow.setOrigin(0, 0);
-        this.shadow.setAlpha(0.5);
+        this.shadow.setAlpha(0.4);
         //this.shadow.visible = false;
         this.add(this.shadow);
         

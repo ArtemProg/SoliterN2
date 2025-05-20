@@ -26,5 +26,6 @@
     "magic_updated": "Magie wiederhergestellt",
     "magic_no_updated": "Wiederherstellung abgelehnt",
     "label_magic_update": "Magie benötigt\n\nWiederherstellung",
-    "label_language": "Sprache: {lang}"
+    "label_language": "Sprache: {lang}",
+    "label_title": ""
 }

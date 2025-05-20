@@ -17,15 +17,16 @@ export default class PreloadScene extends Phaser.Scene {
             { key: 'pt', name: 'Português' },
             { key: 'ru', name: 'Русский' },
             { key: 'pl', name: 'Polski' },
-            { key: 'uk', name: 'Українська' },
-            { key: 'cs', name: 'Čeština' },
-            { key: 'ro', name: 'Română' },
-            { key: 'sr', name: 'Српски' },
             { key: 'kk', name: 'Қазақша' },
-            { key: 'be', name: 'Беларуская' },
-            { key: 'hy', name: 'Հայերեն' },
-            { key: 'ka', name: 'ქართული' },
-            { key: 'tr', name: 'Türkçe' }
+            { key: 'tr', name: 'Türkçe' },
+            
+            // { key: 'uk', name: 'Українська' },
+            // { key: 'cs', name: 'Čeština' },
+            // { key: 'ro', name: 'Română' },
+            // { key: 'sr', name: 'Српски' },
+            // { key: 'be', name: 'Беларуская' },
+            // { key: 'hy', name: 'Հայերեն' },
+            // { key: 'ka', name: 'ქართული' },
         ];
     }
 
@@ -41,13 +42,8 @@ export default class PreloadScene extends Phaser.Scene {
 
     create() {
 
-        // Проверим, какие языки реально были загружены
-        this.availableLanguages = this.availableLanguages.filter(lang => {
-            const data = this.cache.json.get(lang.key);
-            return data && typeof data === 'object';
-        });
-        this.registry.set('availableLanguages', this.availableLanguages);
-        
+        this.setLanguage()
+
         new Promise((resolve) => {
             
             if (this.userSettingsManager.settings.isSaved) {
@@ -67,6 +63,40 @@ export default class PreloadScene extends Phaser.Scene {
 
         });
         
+    }
+
+    setLanguage() {
+        // Проверим, какие языки реально были загружены
+        this.availableLanguages = this.availableLanguages.filter(lang => {
+            const data = this.cache.json.get(lang.key);
+            return data && typeof data === 'object';
+        });
+        this.registry.set('availableLanguages', this.availableLanguages);
+        
+        let language = '';
+        if (this.userSettingsManager.settings.isLanguageSaved && this.userSettingsManager.language) {
+            const langExists = this.availableLanguages.some(lang => {
+                return lang.key === this.userSettingsManager.language;
+            });
+            if (langExists) {
+                language = this.userSettingsManager.language;
+            }
+        }
+        if (!language) {
+            language = this.sdk.lang();
+        }
+
+        let availableLanguage;
+
+        if (this.availableLanguages.some(lang => lang.key === language)) {
+            availableLanguage = language;
+        } else if (['be', 'kk', 'uk', 'uz'].some(lang => lang === language)) {
+            availableLanguage = 'ru';
+        } else {
+            availableLanguage = 'en';
+        }
+
+        this.userSettingsManager.setLanguage(availableLanguage);
     }
 
     preloadAssets() {

@@ -26,5 +26,6 @@
     "magic_updated": "Magic replenished",
     "magic_no_updated": "Replenishment declined",
     "label_magic_update": "Magic requires\n\nrestoration",
-    "label_language": "Language: {lang}"
+    "label_language": "Language: {lang}",
+    "label_title": ""
 }

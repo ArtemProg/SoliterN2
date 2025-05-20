@@ -15,7 +15,8 @@ export default class UserSettingsManager {
             bestTime: 0,
             numberOfGamesCompleted: 0,
             isSaved: 0,
-            language: 'en',
+            language: '',
+            isLanguageSaved: 0,
         };
         this.pendingChanges = {};
 
@@ -51,7 +52,11 @@ export default class UserSettingsManager {
         let settings = {};
         Object.assign(settings, this.settings);
 
-        settings.language = this.langCodeToNumber(settings.language);
+        if (this.settings.isLanguageSaved) {
+            settings.language = this.langCodeToNumber(settings.language);
+        } else {
+            settings.language = '';
+        }
 
         return this.sdkProvider.setPlayerStats(settings)
             .then(() => {
@@ -86,8 +91,12 @@ export default class UserSettingsManager {
         }
     }
 
-    setLanguage(language) {
+    setLanguage(language, isLanguageSaved) {
         this.pendingChanges.language = language;
+        this.pendingChanges.isLanguageSaved = isLanguageSaved ? 1 : 0;
+        if (!isLanguageSaved) {
+            this.settings.language = language;
+        }
     }
 
     updateBestScore(score) {

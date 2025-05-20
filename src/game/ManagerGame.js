@@ -8,6 +8,7 @@ import FoundationsSpotGO from "./FoundationsSpotGO.js";
 import PileSpotGO from "./PileSpotGO.js";
 import StokSpotGO from "./StokSpotGO.js";
 import WasteSpotGO from "./WasteSpotGO.js";
+import OverlayManager from "./OverlayManager.js";
 import CommandCard from "../core/CommandCard.js";
 import CommandHistory from "../core/CommandHistory.js"
 import SoundGame from "./SoundGame.js";
@@ -109,6 +110,8 @@ export default class ManagerGame {
     //** @type {Phaser.GameObjects.Container} */
     //#containerDrag;
 
+    overlay;
+
     #commandIsRunning = false;
 
     #statusGame = 0;
@@ -208,6 +211,8 @@ export default class ManagerGame {
         this.#sound = new SoundGame(this.#scene, this);
         this.#commandHistory = new CommandHistory();
 
+        this.overlay = new OverlayManager(this.#scene);
+
         this.userSettingsManager.addObserver(this);
 
         this.createSpots(positions);
@@ -218,7 +223,9 @@ export default class ManagerGame {
 
         this.displayOfAds = {
             lastAdTimestamp: Number(localStorage.getItem("lastAdTimestamp") || 0),
-            intervalSmartAd: 1 * 60 * 1000,
+            intervalSmartAd: 3 * 60 * 1000,
+            isActive: false,
+            isActiveReward: false,
         };
 
         this.#initialized = true;
@@ -294,6 +301,12 @@ export default class ManagerGame {
         */
     }
     
+    resizeGame(settingsResize) {
+        this.redrawUIGame(settingsResize);
+        this.redrawDeskGame(this.#scene.positionsSpots);
+        this.overlay.handleResize();
+    }
+
     redrawUIGame(settingsResize) {
 
         this.#settingsResize = settingsResize;
@@ -386,7 +399,7 @@ export default class ManagerGame {
 
         this.numberOfMoves = 0;
         this.numberOfScore = 0;
-        this.numberOfMagic = 200; // sloa
+        this.numberOfMagic = 2;
         
         this.#croupier.mixAndTransferToSpotStok(isNewGame);
 
@@ -1301,7 +1314,7 @@ export default class ManagerGame {
     }
 
     /** @param {CommandCard[]} commandsCard */
-    async executeCommands(commandsCard) {
+    async executeCommands(commandsCard, options = {sound: true}) {
 
         this.#commandIsRunning = true;
 
@@ -1313,7 +1326,10 @@ export default class ManagerGame {
             commandsCard: [],
         };
 
-        this.#sound.slide();
+        if (options?.sound) {
+            this.#sound.slide();
+        }
+
         let cancelAllActions = false;
         for (const commandCard of commandsCard) {
 
@@ -1939,6 +1955,10 @@ export default class ManagerGame {
 
         if (this.spotStok.value.quantity === 1) {
             this.spotStok.updatePositionShadow(0);
+        } else if (this.spotStok.value.quantity === 2) {
+            this.spotStok.updatePositionShadow(1);
+        } else if (this.spotStok.value.quantity > 2) {
+            this.spotStok.updatePositionShadow(2);
         }
 
         const results = await Promise.all(promises);
@@ -2759,16 +2779,19 @@ export default class ManagerGame {
 
     async showRewardedVideo(data) {
 
+        this.displayOfAds.isActiveReward = true;
+
         this.stopHint();
 
         this.putOnPause();
 
-        
-
         let result = false;
         try {
             result = await this.sdk.showRewardedAd();
-            result && this.addMagic(2);
+            if (result) {
+                this.#sound.recovery();
+                this.addMagic(2);
+            }
         } catch (error) {
             console.error('Error when displaying ads:', error.message);
         }
@@ -2779,21 +2802,38 @@ export default class ManagerGame {
         this.#scene.time.delayedCall(2000, () => {
             this.#scene.events.emit('hintHideText', {});
         }, [], this);
+
+         this.displayOfAds.isActiveReward = false;
     }
+
+    isRewardedAdActive() {
+        return this.displayOfAds.isActiveReward;
+    }
+
+    isInterstitialAdVisible() {
+        return this.displayOfAds.isActive;
+    }
+
 
     async showAd(isAuto = true) {
         
-        const now = Date.now();
+        if (this.displayOfAds.isActive) return;
+        
         const displayOfAds = this.displayOfAds;
+        displayOfAds.isActive = true;
+
+        const now = Date.now();
         
         const deltaTime = now - displayOfAds.lastAdTimestamp;
         if (isAuto) {
-            if (deltaTime < displayOfAds.intervalSmartAd) return;
+            if (deltaTime < displayOfAds.intervalSmartAd) {
+                displayOfAds.isActive = false;
+                return;
+            }
         } else if (deltaTime < 60_000) {
+            displayOfAds.isActive = false;
             return;
         };
-
-        if (displayOfAds.isActive) return;
 
         return new Promise(resolve => {
 
@@ -2801,7 +2841,6 @@ export default class ManagerGame {
                 try {
                     this.sdk.showInterstitialAd(
                         () => {
-                            displayOfAds.isActive = true;
                             this.stopHint();
                             this.putOnPause();
                         },
@@ -2815,6 +2854,7 @@ export default class ManagerGame {
                         }
                     );
                 } catch (error) {
+                    displayOfAds.isActive = false;
                     console.error('Error when displaying ads:', error?.message || error);
                     // Дополнительные действия по обработке ошибки
                     resolve();
@@ -3181,6 +3221,8 @@ export default class ManagerGame {
             return fResult(true);
         }
 
+        const options = { sound: false };
+
         const commad = new CommandCard(
             this,
             nameCommand,
@@ -3188,7 +3230,7 @@ export default class ManagerGame {
             dataMagicMove.spotFrom,
             dataMagicMove.spotTo);
 
-        await this.executeCommands([commad]);
+        await this.executeCommands([commad], options);
 
         this.addMagic(-1);
 
@@ -3204,6 +3246,8 @@ export default class ManagerGame {
      * @param {Spot} spotTo 
      */
     async command_magicMoveCardFirstCard(cards, spotFrom, spotTo) {
+
+        this.overlay.show();
 
         const cardGO = this.#mappedCards.get(cards[0]);
         const spotFromGO = this.#mappedSpots.get(spotFrom);
@@ -3296,6 +3340,8 @@ export default class ManagerGame {
         spotFromGO.updateText();
         spotToGO.updateText();
 
+        this.overlay.hide();
+
         /** @param {Spot} spot */
         const f = (spot) => {
             this.#mappedSpots.get(spot).updatePositionShadow();
@@ -3378,6 +3424,8 @@ export default class ManagerGame {
         const cardGO = this.#mappedCards.get(cards[0]);
         const spotFromGO = this.#mappedSpots.get(spotFrom);
         const spotToGO = this.#mappedSpots.get(spotTo);
+
+        this.overlay.show();
 
         await this.startAnimationWand(cardGO, spotFromGO, spotToGO);
 
@@ -3474,6 +3522,8 @@ export default class ManagerGame {
         } else {
             this.#croupier.magicMoveCard(cards[0], spotFrom, spotTo);
         }
+
+        this.overlay.hide();
 
         spotFromGO.updateText();
         spotToGO.updateText();
@@ -3632,6 +3682,8 @@ export default class ManagerGame {
         spriteWand.setRotation(0);
         spriteWand.setVisible(true);
 
+        this.#sound.magic();
+
         let promise = new Promise((resolve, reject) => {
             // Полёт по кривой
             scene.tweens.addCounter({
@@ -3647,6 +3699,8 @@ export default class ManagerGame {
                 },
                 onComplete: () => {
                     
+                    this.#sound.wandSwing();
+
                     scene.tweens.add({
                         targets: spriteWand,
                         rotation: Phaser.Math.DegToRad(30),
@@ -3732,7 +3786,7 @@ export default class ManagerGame {
         }
     }
 
-    setLanguage(language) {
+    setLanguage(language, isLanguageSaved = false) {
 
         let availableLanguage;
 
@@ -3744,17 +3798,20 @@ export default class ManagerGame {
             availableLanguage = 'en';
         }
 
-        this.userSettingsManager.setLanguage(availableLanguage);
-        this.#scene.userSettingsManager.saveSettings();
+        this.userSettingsManager.setLanguage(availableLanguage, isLanguageSaved);
+        if (isLanguageSaved) {
+            this.#scene.userSettingsManager.saveSettings();
+        }
         
         this.localization = this.#scene.cache.json.get(this.userSettingsManager.language);
     }
 
     changeLanguage(data) {
 
-        this.setLanguage(data.language);
+        this.setLanguage(data.language, true);
 
         this.#scene.events.emit('updateLocalization', { language: data.language });
 
     }
+
 }

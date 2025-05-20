@@ -26,5 +26,6 @@
     "magic_updated": "Magie restaurée",
     "magic_no_updated": "Restauration refusée",
     "label_magic_update": "La magie nécessite\n\nune restauration",
-    "label_language": "Langue : {lang}"
+    "label_language": "Langue : {lang}",
+    "label_title": ""
 }

@@ -86,13 +86,14 @@ export default class GameScene extends Phaser.Scene {
 
         const fResizeGame = debounced(() => {
             const settingsResize = this.recalculateScreen();
-            this.managerGame.redrawUIGame(settingsResize);
-            this.managerGame.redrawDeskGame(this.positionsSpots);
+            this.managerGame.resizeGame(settingsResize);
         }, 100);
 
 
         window.addEventListener('resize', () => {
             
+            if (this.managerGame.isInterstitialAdVisible() || this.managerGame.isRewardedAdActive()) return;
+
             fResizeGame();
             
         });

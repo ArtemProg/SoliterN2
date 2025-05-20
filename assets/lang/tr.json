@@ -26,5 +26,6 @@
     "magic_updated": "Büyü yenilendi",
     "magic_no_updated": "Yenileme reddedildi",
     "label_magic_update": "Büyü yenileme\ngerektiriyor",
-    "label_language": "Dil: {lang}"
+    "label_language": "Dil: {lang}",
+    "label_title": ""
 }

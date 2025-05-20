@@ -26,5 +26,6 @@
     "magic_updated": "Magia przywrócona",
     "magic_no_updated": "Odmówiono przywrócenia",
     "label_magic_update": "Magia wymaga\n\nprzywrócenia",
-    "label_language": "Język: {lang}"
+    "label_language": "Język: {lang}",
+    "label_title": ""
 }

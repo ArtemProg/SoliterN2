@@ -26,5 +26,6 @@
     "magic_updated": "Сиқыр қалпына келтірілді",
     "magic_no_updated": "Қалпына келтіру қабылданбады",
     "label_magic_update": "Сиқырды\nқалпына келтіру қажет",
-    "label_language": "Тіл: {lang}"
+    "label_language": "Тіл: {lang}",
+    "label_title": ""
 }

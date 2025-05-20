@@ -35,6 +35,14 @@ export default class PlayPanel extends Form {
 
         const color = 0xffffff;
 
+        this.title = this.scene.add.text(props.title.posX, props.title.posY, `btn_play`)
+            .setColor('#ffffff')
+            .setFontSize(props.title.fontSize)
+            .setFontFamily('Arial')
+            .setAlpha(0.8)
+            .setOrigin(0.5, 0.5);
+        this.add(this.title);
+
         this.btns[0] = new BaseButton(
             props.btn.posX,
             props.btn.posY1,
@@ -140,6 +148,11 @@ export default class PlayPanel extends Form {
         const btn_posY3 = height - btn_height;
 
         return {
+            title: {
+                posX: width / 2,
+                posY: 60 / scaleGame,
+                fontSize: 60 / scaleGame,
+            },
             btns: btns,
             btn: {
                 width: btn_width,
@@ -174,10 +187,12 @@ export default class PlayPanel extends Form {
         this.btns[1].setScaleSprite(props.btn.spriteScale);
         this.btns[2].setScaleSprite(props.btn.spriteScale);
         
+        this.title.setFontSize(props.title.fontSize);
         this.btns[0].setFontSize(props.btn.fontSize);
         this.btns[1].setFontSize(props.btn.fontSize);
         this.btns[2].setFontSize(props.btn.fontSize);
 
+        this.title.setPosition(props.title.posX, props.title.posY);
         this.btns[0].setPosition(props.btn.posX, props.btn.posY1);
         this.btns[1].setPosition(props.btn.posX, props.btn.posY2);
         this.btns[2].setPosition(props.btn.posX, props.btn.posY3);
@@ -185,6 +200,7 @@ export default class PlayPanel extends Form {
 
     updateLocalization() {
         const localization = this.scene.getLocalization();
+        this.title.setText(localization.btn_play);
         this.btns[0].setText(localization.btn_new_game);
         this.btns[1].setText(localization.btn_replay);
         this.btns[2].setText(localization.btn_close);

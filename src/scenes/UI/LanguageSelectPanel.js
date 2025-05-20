@@ -73,6 +73,8 @@ export default class LanguageSelectPanel extends Form {
 
     setupMask() {
         
+        if (!this.isOpen) return;
+
         // Удаляем старую маску, если есть
         if (this._scrollData.maskRect) {
             this._scrollData.maskRect.destroy();
@@ -104,34 +106,57 @@ export default class LanguageSelectPanel extends Form {
         if (this._scrollData.scrollEnabled) return;
         this._scrollData.scrollEnabled = true;
 
-        this.scene.input.on('wheel', (_pointer, _gameObjects, _dx, dy) => {
+        const onWheel = (_pointer, _gameObjects, _dx, dy) => {
             this.content.y -= dy;
             this.limitScroll();
-        });
+        };
 
-        let dragging = false;
-        let startY = 0;
-
-        this.scene.input.on('pointerdown', (pointer) => {
+        const onPointerDown = (pointer) => {
             const localY = pointer.y - this.container.y;
             if (localY < 0 || localY > this.height) return;
-            dragging = true;
-            startY = pointer.y;
-        });
+            this._scrollData.dragging = true;
+            this._scrollData.startY = pointer.y;
+        };
 
-        this.scene.input.on('pointerup', () => {
-            dragging = false;
-        });
+        const onPointerUp = () => {
+            this._scrollData.dragging = false;
+        };
 
-        this.scene.input.on('pointermove', (pointer) => {
-            if (!pointer.isDown || !dragging) return;
+        const onPointerMove = (pointer) => {
+            if (!pointer.isDown || !this._scrollData.dragging) return;
 
-            const delta = pointer.y - startY;
+            const delta = pointer.y - this._scrollData.startY;
             this.content.y += delta;
-            startY = pointer.y;
+            this._scrollData.startY = pointer.y;
             this.limitScroll();
-        });
+        };
+
+        // Сохраняем ссылки на обработчики
+        this._scrollData.listeners = {
+            onWheel, onPointerDown, onPointerUp, onPointerMove
+        };
+
+        // Подключаем обработчики событий
+        this.scene.input.on('wheel', onWheel);
+        this.scene.input.on('pointerdown', onPointerDown);
+        this.scene.input.on('pointerup', onPointerUp);
+        this.scene.input.on('pointermove', onPointerMove);
     }
+
+    disableScroll() {
+        const { onWheel, onPointerDown, onPointerUp, onPointerMove } = this._scrollData.listeners || {};
+
+        // Отключаем обработчики событий
+        if (onWheel) this.scene.input.off('wheel', onWheel);
+        if (onPointerDown) this.scene.input.off('pointerdown', onPointerDown);
+        if (onPointerUp) this.scene.input.off('pointerup', onPointerUp);
+        if (onPointerMove) this.scene.input.off('pointermove', onPointerMove);
+
+        // Сбрасываем флаг и очищаем ссылки
+        this._scrollData.scrollEnabled = false;
+        this._scrollData.listeners = {};
+    }
+
 
     getContentHeight() {
         let minY = Infinity;
@@ -184,6 +209,9 @@ export default class LanguageSelectPanel extends Form {
 
     close() {
 
+        this.disableScroll();
+        this.content.setPosition(0, 0);
+
         if (this.currentLanguage !== this.scene.getLanguage()) {
             const dataEvent = {name: 'languagePanel', language: this.currentLanguage};
             this.scene.onChangeLanguage(dataEvent);
@@ -195,6 +223,15 @@ export default class LanguageSelectPanel extends Form {
     onCompleteOpen() {
         this.setupMask();
         this.limitScroll();
+        this.enableScroll();
+    }
+
+    onCompleteClose() {
+        if (this._scrollData.maskRect) {
+            this._scrollData.maskRect.destroy();
+            this._scrollData.maskRect = null;
+            this._scrollData.mask = null;
+        }
     }
 
     static getBaseSettings(scene) {
@@ -203,12 +240,15 @@ export default class LanguageSelectPanel extends Form {
 
         const isLandscape = scene.settingsResize.settingDesk.type === 'LANDSCAPE';
         const isDesktop = scene.settingsResize.settingDesk.type === 'DESKTOP';
+        const isPortrait = scene.settingsResize.settingDesk.type === 'PORTRAIT';
         
         const scaleGame = isDesktop ? 1.5 : 0.8;//window.devicePixelRatio * scene.scaleGame * (isDesktop ? 2 : 1);
 
         let width = 600 / scaleGame;
-        let height = isLandscape ? scene.scale.height : 100 * length / scaleGame;
-
+        var height = isLandscape ? scene.scale.height : 100 * length / scaleGame;
+        if (isPortrait && height > scene.scale.height * 3 / 5) {
+            height = 190 * 4 / scaleGame; // SettingsPanel
+        }
         
 
         return {
