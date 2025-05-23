@@ -29,11 +29,15 @@ export default class LocalStorageSDK {
         });
     }
 
+    lang() {
+        return 'ru';
+    }
+
     getPlayerStats() {
         return new Promise((resolve) => {
             const settings = {
                 // language: 'en'
-                language: 'ru'
+                //language: 'ru'
             };
             const data = localStorage.getItem('userSettings');
             if (data) {

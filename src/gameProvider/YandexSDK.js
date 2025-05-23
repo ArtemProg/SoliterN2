@@ -116,16 +116,17 @@ export default class YandexSDK extends GameSDK {
     return this._throttleRequest('showRewardedAd', () => {
         return new Promise((resolve, reject) => {
             if (this.sdk) {
+                let wasShown = false;
                 this.sdk.adv.showRewardedVideo({
                     callbacks: {
                         onOpen: () => console.log('Rewarded video ad opened'),
                         onRewarded: () => {
                             console.log('User rewarded');
-                            resolve(true);
+                            wasShown = true;
                         },
                         onClose: () => {
                             console.log('Rewarded video ad closed');
-                            resolve(false);
+                            resolve(wasShown);
                         },
                         onError: err => {
                             console.error('Error showing rewarded video ad:', err);

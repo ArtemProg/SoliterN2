@@ -25,7 +25,7 @@
     "hint_none": "Brak możliwych ruchów",
     "magic_updated": "Magia przywrócona",
     "magic_no_updated": "Odmówiono przywrócenia",
-    "label_magic_update": "Magia wymaga\n\nprzywrócenia",
+    "label_magic_update": "Magia wymaga\nprzywrócenia!\n\n+2 Magii za reklamę",
     "label_language": "Język: {lang}",
     "label_title": ""
 }

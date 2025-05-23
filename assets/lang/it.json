@@ -25,7 +25,7 @@
     "hint_none": "Nessuna carta può essere spostata",
     "magic_updated": "Magia ripristinata",
     "magic_no_updated": "Ripristino rifiutato",
-    "label_magic_update": "La magia richiede\n\nripristino",
+    "label_magic_update": "La magia richiede\nripristino!\n\n+2 Magia per pubblicità",
     "label_language": "Lingua: {lang}",
     "label_title": ""
 }

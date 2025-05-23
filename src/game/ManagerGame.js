@@ -223,7 +223,7 @@ export default class ManagerGame {
 
         this.displayOfAds = {
             lastAdTimestamp: Number(localStorage.getItem("lastAdTimestamp") || 0),
-            intervalSmartAd: 3 * 60 * 1000,
+            intervalSmartAd: 3 * 55 * 1000,
             isActive: false,
             isActiveReward: false,
         };
@@ -302,6 +302,7 @@ export default class ManagerGame {
     }
     
     resizeGame(settingsResize) {
+        this.#scene.updateSizeScreen(settingsResize.settingDesk);
         this.redrawUIGame(settingsResize);
         this.redrawDeskGame(this.#scene.positionsSpots);
         this.overlay.handleResize();
@@ -2592,7 +2593,7 @@ export default class ManagerGame {
 
         this.numberOfScore = mementoState.score;
         this.numberOfMoves = mementoState.moves;
-        this.#numberOfMagic = mementoState.magic || 2;
+        this.#numberOfMagic = mementoState.magic || 0;
         
         // таймер
         const currentTime = this.#scene.time.now;
@@ -2788,6 +2789,7 @@ export default class ManagerGame {
         let result = false;
         try {
             result = await this.sdk.showRewardedAd();
+            this.checkResize();
             if (result) {
                 this.#sound.recovery();
                 this.addMagic(2);
@@ -2850,6 +2852,7 @@ export default class ManagerGame {
                                 displayOfAds.lastAdTimestamp = Date.now();
                                 localStorage.setItem("lastAdTimestamp", displayOfAds.lastAdTimestamp.toString());
                             }
+                            this.checkResize();
                             resolve();
                         }
                     );
@@ -2862,6 +2865,16 @@ export default class ManagerGame {
             });
         });
         
+    }
+
+    checkResize() {
+        const settingsResize = this.#scene.recalculateScreen();
+        const isResize = settingsResize.parentSize.width != this.#settingsResize.parentSize.width
+            || settingsResize.parentSize.height != this.#settingsResize.parentSize.height
+            || settingsResize.parentSize.aspectRatio != this.#settingsResize.parentSize.aspectRatio
+        if (isResize) {
+            this.resizeGame(settingsResize);
+        }
     }
 
     gameIsLoaded() {

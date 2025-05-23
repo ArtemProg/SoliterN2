@@ -21,6 +21,10 @@ export default class SoundGame {
     #indexGuitarStrings;
     #volume;
 
+    get volumeValue() {
+        return this.#manager.userSettingsManager.settings.sound;
+    }
+
     /** @param {Phaser.Scene} scene */
     constructor(scene, manager) {
 
@@ -43,18 +47,17 @@ export default class SoundGame {
         this.loadAssets();
     }
 
+
     slide() {
 
-        if (this.#scene.sound.locked || !this.#isLoaded) {
+        if (this.#scene.sound.locked || !this.#isLoaded || !this.volumeValue) {
             return;
         }
 
         if (this.#manager.isGameRuning()) {
 
-            const sound = this.#manager.userSettingsManager.settings.sound;
-
             // Получаем основную громкость для shake
-            const baseVolume = this.#volume.slide[sound]; // Основная громкость (например, 0.3)
+            const baseVolume = this.#volume.slide[this.volumeValue]; // Основная громкость (например, 0.3)
 
             // Генерируем случайное отклонение от основной громкости (±20%)
             const variation = Phaser.Math.FloatBetween(-0.2, 0.2); // Отклонение от основного значения
@@ -78,7 +81,7 @@ export default class SoundGame {
 
     magic() {
 
-        if (this.#scene.sound.locked || !this.#isLoaded) {
+        if (this.#scene.sound.locked || !this.#isLoaded || !this.volumeValue) {
             return;
         }
 
@@ -92,7 +95,7 @@ export default class SoundGame {
 
     deal() {
 
-        if (this.#scene.sound.locked || !this.#isLoaded) {
+        if (this.#scene.sound.locked || !this.#isLoaded || !this.volumeValue) {
             return;
         }
 
@@ -100,14 +103,14 @@ export default class SoundGame {
     }
 
     wandSwing() {
-        if (this.#scene.sound.locked || !this.#isLoaded) {
+        if (this.#scene.sound.locked || !this.#isLoaded || !this.volumeValue) {
             return;
         }
         this.#wandSwing.play();
     }
 
     recovery() {
-        if (this.#scene.sound.locked || !this.#isLoaded) {
+        if (this.#scene.sound.locked || !this.#isLoaded || !this.volumeValue) {
             return;
         }
         this.#recovery.play();
@@ -115,14 +118,12 @@ export default class SoundGame {
 
     undo() {
 
-        if (this.#scene.sound.locked || !this.#isLoaded) {
+        if (this.#scene.sound.locked || !this.#isLoaded || !this.volumeValue) {
             return;
         }
 
-        const sound = this.#manager.userSettingsManager.settings.sound;
-
         // Получаем основную громкость для shake
-        const baseVolume = this.#volume.undo[sound]; // Основная громкость (например, 0.3)
+        const baseVolume = this.#volume.undo[this.volumeValue]; // Основная громкость (например, 0.3)
 
         // Генерируем случайное отклонение от основной громкости (±20%)
         const variation = Phaser.Math.FloatBetween(-0.2, 0.2); // Отклонение от основного значения
@@ -138,15 +139,13 @@ export default class SoundGame {
 
     shake() {
 
-        if (this.#scene.sound.locked || !this.#isLoaded) {
+        if (this.#scene.sound.locked || !this.#isLoaded || !this.volumeValue) {
             console.log(this.#scene.sound.locked, this.#isLoaded);
             return;
         }
 
-        const sound = this.#manager.userSettingsManager.settings.sound;
-
         // Получаем основную громкость для shake (например, 0.3)
-        const baseVolume = this.#volume.shake[sound];
+        const baseVolume = this.#volume.shake[this.volumeValue];
 
         // Генерируем случайное отклонение от основной громкости (±20%)
         const variation = Phaser.Math.FloatBetween(-0.2, 0.2) * baseVolume; // 20% от baseVolume
@@ -162,7 +161,7 @@ export default class SoundGame {
 
     guitarStrings(fromTheStart = false) {
 
-        if (this.#scene.sound.locked || !this.#isLoaded) {
+        if (this.#scene.sound.locked || !this.#isLoaded || !this.volumeValue) {
             return;
         }
         
@@ -181,7 +180,7 @@ export default class SoundGame {
 
         if (!this.#isLoaded) return;
         
-        const sound = this.#manager.userSettingsManager.settings.sound;
+        const sound = this.volumeValue;
         
         for (const music of this.#slide) {
             music.setVolume(this.#volume.slide[sound]);

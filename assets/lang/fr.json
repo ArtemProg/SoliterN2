@@ -25,7 +25,7 @@
     "hint_none": "Aucune carte ne peut être déplacée",
     "magic_updated": "Magie restaurée",
     "magic_no_updated": "Restauration refusée",
-    "label_magic_update": "La magie nécessite\n\nune restauration",
+    "label_magic_update": "La magie nécessite\nune restauration!\n\n+2 Magie pour pub",
     "label_language": "Langue : {lang}",
     "label_title": ""
 }

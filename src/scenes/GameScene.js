@@ -45,6 +45,7 @@ export default class GameScene extends Phaser.Scene {
         };
 
         const settingsResize = this.recalculateScreen();
+        this.updateSizeScreen(settingsResize.settingDesk);
 
         this.scene.launch('UIScene', {
             sdkProvider: this.sdk,
@@ -452,18 +453,20 @@ export default class GameScene extends Phaser.Scene {
             settingDesk = SettingDesk.myScaleApp_PORTRAIT(this.cardGeometry, parentSize);
         }
 
-        this.positionsSpots = settingDesk.positionSpot;
-
-        this.scale.resize(settingDesk.width, settingDesk.height);
-        this.cameras.resize(settingDesk.width, settingDesk.height);
-        this.scale.setGameSize(settingDesk.width, settingDesk.height);
-
         return {
             parentSize: parentSize,
             settingDesk: settingDesk,
             isDesktop: this.game.device.os.desktop,
             cardGeometry: this.cardGeometry,
         };
+    }
+
+    updateSizeScreen(settingDesk) {
+        this.positionsSpots = settingDesk.positionSpot;
+
+        this.scale.resize(settingDesk.width, settingDesk.height);
+        this.cameras.resize(settingDesk.width, settingDesk.height);
+        this.scale.setGameSize(settingDesk.width, settingDesk.height);
     }
 
     getScaleGame() {

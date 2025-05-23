@@ -25,7 +25,7 @@
     "hint_none": "Nenhuma carta pode ser movida",
     "magic_updated": "Magia restaurada",
     "magic_no_updated": "Recarga recusada",
-    "label_magic_update": "A magia precisa de\n\nrecuperação",
+    "label_magic_update": "A magia precisa de\nrecuperação!\n\n+2 Magia por anúncio",
     "label_language": "Idioma: {lang}",
     "label_title": ""
 }
